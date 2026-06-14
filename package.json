@@ -1,0 +1,9 @@
+{
+  "name": "controle-suplementos-alimentos",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Controle financeiro e de estoque para suplementos e alimentos",
+  "scripts": {
+    "test": "node js/testStore.js"
+  }
+}

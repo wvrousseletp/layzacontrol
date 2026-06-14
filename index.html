@@ -1,0 +1,902 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Controle financeiro e de estoque para suplementos e alimentos caseiros.">
+  <title>NutriTrack - Controle de Suplementos e Alimentos</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-container">
+    
+    <!-- SIDEBAR NAVIGATION -->
+    <aside class="sidebar">
+      <div>
+        <div class="logo-container">
+          <div class="logo-icon">N</div>
+          <span class="logo-text">NutriTrack</span>
+        </div>
+        
+        <nav>
+          <ul class="nav-menu">
+            <li class="nav-item active">
+              <button data-target="view-dashboard">
+                <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                Dashboard
+              </button>
+            </li>
+            <li class="nav-item">
+              <button data-target="view-supplements">
+                <svg viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+                Suplementos
+              </button>
+            </li>
+            <li class="nav-item">
+              <button data-target="view-foods">
+                <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path></svg>
+                Alimentos
+              </button>
+            </li>
+            <li class="nav-item">
+              <button data-target="view-people">
+                <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                Destinatários
+              </button>
+            </li>
+            <li class="nav-item">
+              <button data-target="view-history">
+                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                Histórico Geral
+              </button>
+            </li>
+          </ul>
+        </nav>
+      </div>
+      
+      <div class="sidebar-footer">
+        <p>NutriTrack v1.0.0</p>
+        <button id="db-reset-btn" class="btn btn-danger btn-sm" style="margin-top: 10px; width: 100%;">Limpar Dados</button>
+      </div>
+    </aside>
+
+    <!-- MAIN CONTENT AREA -->
+    <main class="main-content">
+      
+      <!-- ============================================== -->
+      <!-- VIEW: DASHBOARD -->
+      <!-- ============================================== -->
+      <section id="view-dashboard" class="view-section active">
+        <div class="header-row">
+          <div class="title-group">
+            <h1>Dashboard Financeiro e Estoque</h1>
+            <p>Visão geral de seus investimentos em suplementos e alimentação caseira.</p>
+          </div>
+        </div>
+
+        <!-- Metric Summary Cards -->
+        <div class="summary-grid">
+          <div class="glass-panel summary-card">
+            <div class="card-icon green">💵</div>
+            <div class="card-info">
+              <span class="card-label">Total Comprado</span>
+              <span class="card-value" id="dash-total-spent">R$ 0,00</span>
+            </div>
+          </div>
+          <div class="glass-panel summary-card">
+            <div class="card-icon cyan">📦</div>
+            <div class="card-info">
+              <span class="card-label">Estoque Insumos</span>
+              <span class="card-value" id="dash-raw-value">R$ 0,00</span>
+            </div>
+          </div>
+          <div class="glass-panel summary-card">
+            <div class="card-icon purple">🧪</div>
+            <div class="card-info">
+              <span class="card-label">Estoque Prontos</span>
+              <span class="card-value" id="dash-finished-value">R$ 0,00</span>
+            </div>
+          </div>
+          <div class="glass-panel summary-card">
+            <div class="card-icon orange">🥣</div>
+            <div class="card-info">
+              <span class="card-label">Consumo Geral</span>
+              <span class="card-value" id="dash-usage-cost">R$ 0,00</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="dashboard-layout">
+          <!-- Charts -->
+          <div class="glass-panel">
+            <h3 style="font-family: 'Montserrat', sans-serif; margin-bottom: 20px;">Investimento Mensal (Compras)</h3>
+            <div id="dashboard-financial-chart" class="chart-container">
+              <!-- SVG generated via JS -->
+            </div>
+          </div>
+
+          <!-- Stock Alerts -->
+          <div class="glass-panel">
+            <h3 style="font-family: 'Montserrat', sans-serif; margin-bottom: 20px; color: var(--color-danger);">Alertas de Estoque</h3>
+            <div class="table-container">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Item</th>
+                    <th>Cat.</th>
+                    <th>Tipo</th>
+                    <th>Qtd</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="dash-alerts-table-body">
+                  <!-- JS injected -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recent Activities -->
+        <div class="glass-panel">
+          <h3 style="font-family: 'Montserrat', sans-serif; margin-bottom: 16px;">Atividades Recentes</h3>
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Operação</th>
+                  <th>Categoria</th>
+                  <th>Item</th>
+                  <th>Quantidade</th>
+                  <th>Valor</th>
+                </tr>
+              </thead>
+              <tbody id="dash-recent-table-body">
+                <!-- JS injected -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================== -->
+      <!-- VIEW: SUPPLEMENTS -->
+      <!-- ============================================== -->
+      <section id="view-supplements" class="view-section">
+        <div class="header-row">
+          <div class="title-group">
+            <h1>Controle de Suplementos</h1>
+            <p>Gerencie matérias-primas, fórmulas e estoque fabricado em casa.</p>
+          </div>
+          <div class="action-group">
+            <button id="btn-supp-add-ing" class="btn btn-secondary">Adicionar Insumo</button>
+            <button id="btn-supp-purchase" class="btn btn-primary">Comprar Insumo</button>
+            <button id="btn-supp-recipe" class="btn btn-secondary">Criar Fórmula</button>
+            <button id="btn-supp-production" class="btn btn-purple">Fabricar Lote</button>
+            <button id="btn-supp-usage" class="btn btn-primary">Enviar Dose</button>
+          </div>
+        </div>
+
+        <!-- Supplements Summary -->
+        <div class="summary-grid">
+          <div class="glass-panel summary-card glass-panel-accent-purple">
+            <div class="card-icon purple">🛍️</div>
+            <div class="card-info">
+              <span class="card-label">Total Gasto (Insumos)</span>
+              <span class="card-value" id="supp-summary-spent">R$ 0,00</span>
+            </div>
+          </div>
+          <div class="glass-panel summary-card glass-panel-accent-purple">
+            <div class="card-icon purple">💾</div>
+            <div class="card-info">
+              <span class="card-label">Valor em Estoque</span>
+              <span class="card-value" id="supp-summary-stock-val">R$ 0,00</span>
+            </div>
+          </div>
+          <div class="glass-panel summary-card glass-panel-accent-purple">
+            <div class="card-icon purple">🔋</div>
+            <div class="card-info">
+              <span class="card-label">Total Consumido</span>
+              <span class="card-value" id="supp-summary-consumption">R$ 0,00</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="columns-2">
+          <!-- Raw Ingredients Table -->
+          <div class="glass-panel">
+            <h3 style="font-family: 'Montserrat', sans-serif; margin-bottom: 16px;">1. Matérias-Primas (Insumos em Estoque)</h3>
+            <div class="table-container">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Insumo</th>
+                    <th>Estoque</th>
+                    <th>Alerta Mín</th>
+                    <th>Preço Médio</th>
+                    <th>Valor Estoque</th>
+                    <th>Última Compra</th>
+                    <th style="text-align: right;">Ações</th>
+                  </tr>
+                </thead>
+                <tbody id="supp-ing-table-body">
+                  <!-- JS Injected -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Formulas and Finished Stock Table -->
+          <div class="glass-panel">
+            <h3 style="font-family: 'Montserrat', sans-serif; margin-bottom: 16px;">2. Suplementos Prontos (Fórmulas e Estoque)</h3>
+            <div class="table-container">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Suplemento / Fórmula</th>
+                    <th>Estoque</th>
+                    <th>Custo Unit.</th>
+                    <th>Valor Estoque</th>
+                    <th>Último Preparo</th>
+                    <th style="text-align: right;">Ações</th>
+                  </tr>
+                </thead>
+                <tbody id="supp-prod-table-body">
+                  <!-- JS Injected -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================== -->
+      <!-- VIEW: FOODS -->
+      <!-- ============================================== -->
+      <section id="view-foods" class="view-section">
+        <div class="header-row">
+          <div class="title-group">
+            <h1>Controle de Alimentos</h1>
+            <p>Gerencie despensa de comida, marmitas preparadas e custos de alimentação.</p>
+          </div>
+          <div class="action-group">
+            <button id="btn-food-add-ing" class="btn btn-secondary">Adicionar Insumo</button>
+            <button id="btn-food-purchase" class="btn btn-primary">Comprar Comida</button>
+            <button id="btn-food-recipe" class="btn btn-secondary">Criar Receita</button>
+            <button id="btn-food-production" class="btn btn-purple">Preparar Marmitas</button>
+            <button id="btn-food-usage" class="btn btn-primary">Registrar Envio/Uso</button>
+          </div>
+        </div>
+
+        <!-- Foods Summary -->
+        <div class="summary-grid">
+          <div class="glass-panel summary-card glass-panel-accent-cyan">
+            <div class="card-icon cyan">🛒</div>
+            <div class="card-info">
+              <span class="card-label">Total Gasto (Compras)</span>
+              <span class="card-value" id="food-summary-spent">R$ 0,00</span>
+            </div>
+          </div>
+          <div class="glass-panel summary-card glass-panel-accent-cyan">
+            <div class="card-icon cyan">🥗</div>
+            <div class="card-info">
+              <span class="card-label">Valor em Estoque</span>
+              <span class="card-value" id="food-summary-stock-val">R$ 0,00</span>
+            </div>
+          </div>
+          <div class="glass-panel summary-card glass-panel-accent-cyan">
+            <div class="card-icon cyan">🍴</div>
+            <div class="card-info">
+              <span class="card-label">Total Consumido</span>
+              <span class="card-value" id="food-summary-consumption">R$ 0,00</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="columns-2">
+          <!-- Food Pantry Table -->
+          <div class="glass-panel">
+            <h3 style="font-family: 'Montserrat', sans-serif; margin-bottom: 16px;">1. Despensa (Ingredientes em Estoque)</h3>
+            <div class="table-container">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Alimento</th>
+                    <th>Estoque</th>
+                    <th>Alerta Mín</th>
+                    <th>Preço Médio</th>
+                    <th>Valor Estoque</th>
+                    <th>Última Compra</th>
+                    <th style="text-align: right;">Ações</th>
+                  </tr>
+                </thead>
+                <tbody id="food-ing-table-body">
+                  <!-- JS Injected -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Meal Prep / Prepared Meals Table -->
+          <div class="glass-panel">
+            <h3 style="font-family: 'Montserrat', sans-serif; margin-bottom: 16px;">2. Pratos Preparados (Marmitas / Receitas Prontas)</h3>
+            <div class="table-container">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Refeição / Prato</th>
+                    <th>Estoque</th>
+                    <th>Custo Unit.</th>
+                    <th>Valor Estoque</th>
+                    <th>Último Preparo</th>
+                    <th style="text-align: right;">Ações</th>
+                  </tr>
+                </thead>
+                <tbody id="food-prod-table-body">
+                  <!-- JS Injected -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================== -->
+      <!-- VIEW: HISTORY -->
+      <!-- ============================================== -->
+      <section id="view-history" class="view-section">
+        <div class="header-row">
+          <div class="title-group">
+            <h1>Histórico de Movimentações</h1>
+            <p>Lista completa de transações de compra, fabricação e uso.</p>
+          </div>
+          <div class="action-group">
+            <button id="hist-export-csv" class="btn btn-secondary">Exportar Excel (CSV)</button>
+            <button id="hist-export-json" class="btn btn-secondary">Fazer Backup (JSON)</button>
+          </div>
+        </div>
+
+        <!-- Filter Bar -->
+        <div class="glass-panel filter-bar">
+          <input type="text" id="hist-filter-search" class="filter-input" placeholder="Buscar por item ou observações..." style="flex-grow: 2;" />
+          
+          <select id="hist-filter-type" class="filter-select">
+            <option value="all">Todas Operações</option>
+            <option value="purchase">Compras</option>
+            <option value="production">Fabricação/Preparo</option>
+            <option value="usage">Uso/Consumo</option>
+          </select>
+
+          <select id="hist-filter-category" class="filter-select">
+            <option value="all">Suplementos e Alimentos</option>
+            <option value="supplements">Suplementos</option>
+            <option value="foods">Alimentos</option>
+          </select>
+
+          <div style="display: flex; gap: 8px; align-items: center; min-width: 320px;">
+            <input type="date" id="hist-filter-start" class="filter-select" placeholder="Início" />
+            <span style="font-size: 0.85rem; color: var(--text-muted);">até</span>
+            <input type="date" id="hist-filter-end" class="filter-select" placeholder="Fim" />
+          </div>
+        </div>
+
+        <!-- History Table -->
+        <div class="glass-panel">
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Operação</th>
+                  <th>Categoria</th>
+                  <th>Item</th>
+                  <th>Quantidade</th>
+                  <th>Preço Unitário</th>
+                  <th>Valor Total</th>
+                  <th style="text-align: right;">Ações</th>
+                </tr>
+              </thead>
+              <tbody id="history-table-body">
+                <!-- JS Injected -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================== -->
+      <!-- VIEW: PEOPLE (RECIPIENTS) -->
+      <!-- ============================================== -->
+      <section id="view-people" class="view-section">
+        <div class="header-row">
+          <div class="title-group">
+            <h1>Gestão de Destinatários</h1>
+            <p>Cadastre pessoas e acompanhe o histórico de envios individuais.</p>
+          </div>
+        </div>
+
+        <div class="dashboard-layout">
+          <!-- Left Panel: People List & Registration Form -->
+          <div>
+            <!-- Registration Form -->
+            <div class="glass-panel" style="margin-bottom: 24px;">
+              <h3 style="font-family: 'Montserrat', sans-serif; margin-bottom: 16px;">Cadastrar Novo Destinatário</h3>
+              <form id="people-add-form">
+                <div class="form-group">
+                  <label for="people-new-name">Nome Completo</label>
+                  <input type="text" id="people-new-name" placeholder="Ex: João da Silva, Maria de Souza" required />
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;">Cadastrar Pessoa</button>
+              </form>
+            </div>
+
+            <!-- People List -->
+            <div class="glass-panel">
+              <h3 style="font-family: 'Montserrat', sans-serif; margin-bottom: 16px;">Destinatários Cadastrados</h3>
+              <div class="table-container">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Nome</th>
+                      <th style="text-align: right;">Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody id="people-table-body">
+                    <!-- JS Injected -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right Panel: Individual Delivery History -->
+          <div class="glass-panel" id="people-history-panel">
+            <h3 id="people-history-title" style="font-family: 'Montserrat', sans-serif; margin-bottom: 16px;">Histórico de Envios</h3>
+            <p id="people-history-placeholder" style="color: var(--text-muted); font-size: 0.9rem;">Selecione uma pessoa à esquerda para carregar o histórico de envios dela.</p>
+            
+            <div id="people-history-table-container" style="display: none;">
+              <div class="table-container">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Data</th>
+                      <th>Cat.</th>
+                      <th>Item</th>
+                      <th>Quantidade</th>
+                    </tr>
+                  </thead>
+                  <tbody id="people-history-table-body">
+                    <!-- JS Injected -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ============================================== -->
+  <!-- MODALS: SUPPLEMENTS -->
+  <!-- ============================================== -->
+  
+  <!-- 1. Add Supplement Ingredient -->
+  <div id="modal-supp-add-ing" class="modal-overlay">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3>Cadastrar Matéria-Prima (Insumo)</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <form id="supp-add-ing-form">
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="supp-ing-name">Nome do Insumo</label>
+            <input type="text" id="supp-ing-name" placeholder="Ex: Creatina Creapure, Beta-Alanina" required />
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="supp-ing-unit">Unidade de Medida</label>
+              <input type="text" id="supp-ing-unit" placeholder="Ex: g, cápsula, ml" required />
+            </div>
+            <div class="form-group">
+              <label for="supp-ing-min">Alerta de Estoque Mínimo</label>
+              <input type="number" step="0.1" id="supp-ing-min" placeholder="Ex: 100" required />
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-close-modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Salvar Insumo</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 2. Purchase Supplement Ingredient -->
+  <div id="modal-supp-purchase" class="modal-overlay">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3>Comprar Insumo de Suplemento</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <form id="supp-purchase-form">
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="supp-pur-ing-select">Selecione o Insumo</label>
+            <select id="supp-pur-ing-select" required></select>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="supp-pur-qty">Quantidade Comprada</label>
+              <input type="number" step="0.01" id="supp-pur-qty" placeholder="Ex: 500" required />
+            </div>
+            <div class="form-group">
+              <label for="supp-pur-cost">Valor Total Pago (R$)</label>
+              <input type="number" step="0.01" id="supp-pur-cost" placeholder="Ex: 120.00" required />
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="supp-pur-date">Data da Compra</label>
+            <input type="date" id="supp-pur-date" required />
+          </div>
+          <div class="form-group">
+            <label for="supp-pur-notes">Observações</label>
+            <input type="text" id="supp-pur-notes" placeholder="Ex: Loja Growth, lote 24A" />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-close-modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Registrar Compra</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 3. Add Supplement Formula/Recipe -->
+  <div id="modal-supp-recipe" class="modal-overlay">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3>Criar Nova Fórmula de Suplemento</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <form id="supp-recipe-form">
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="supp-rec-name">Nome do Suplemento Pronto</label>
+            <input type="text" id="supp-rec-name" placeholder="Ex: Pré-Treino Focus, Blend Termogênico" required />
+          </div>
+          <div class="form-group">
+            <label for="supp-rec-unit">Unidade do Produto Final</label>
+            <input type="text" id="supp-rec-unit" placeholder="Ex: dose, pote, cápsula" required />
+          </div>
+          
+          <div class="form-group">
+            <label>Composição da Fórmula (por unidade/dose)</label>
+            <div id="supp-recipe-ingredients-builder" class="recipe-builder">
+              <!-- Dynamically populated rows -->
+            </div>
+            <button type="button" id="supp-recipe-add-ing-row" class="btn btn-secondary btn-sm" style="margin-top: 10px;">+ Adicionar Insumo</button>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-close-modal">Cancelar</button>
+          <button type="submit" class="btn btn-purple">Criar Fórmula</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 4. Batch Production of Supplement -->
+  <div id="modal-supp-production" class="modal-overlay">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3>Registrar Fabricação (Produção)</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <form id="supp-production-form">
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="supp-prod-recipe-select">Fórmula a Produzir</label>
+            <select id="supp-prod-recipe-select" required></select>
+          </div>
+          <div class="form-group">
+            <label for="supp-prod-qty">Quantidade Produzida (Rendimento)</label>
+            <input type="number" step="0.01" id="supp-prod-qty" placeholder="Ex: 30 (doses)" required />
+          </div>
+          <div class="form-group">
+            <label for="supp-prod-date">Data de Produção</label>
+            <input type="date" id="supp-prod-date" required />
+          </div>
+          <div class="form-group">
+            <label for="supp-prod-notes">Observações</label>
+            <input type="text" id="supp-prod-notes" placeholder="Ex: Adicionado adoçante sucralose" />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-close-modal">Cancelar</button>
+          <button type="submit" class="btn btn-purple">Registrar Produção</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 5. Consume Supplement -->
+  <div id="modal-supp-usage" class="modal-overlay">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3>Registrar Envio / Entrega</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <form id="supp-usage-form">
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="supp-use-item-select">Selecione o Suplemento Pronto</label>
+            <select id="supp-use-item-select" required></select>
+          </div>
+          <div class="form-group">
+            <label for="supp-use-recipient-select">Destinatário (Para quem?)</label>
+            <select id="supp-use-recipient-select" required></select>
+          </div>
+          <div class="form-group">
+            <label for="supp-use-qty">Quantidade Enviada</label>
+            <input type="number" step="0.01" id="supp-use-qty" placeholder="Ex: 1 (dose)" required />
+          </div>
+          <div class="form-group">
+            <label for="supp-use-date">Data do Envio</label>
+            <input type="date" id="supp-use-date" required />
+          </div>
+          <div class="form-group">
+            <label for="supp-use-notes">Observações</label>
+            <input type="text" id="supp-use-notes" placeholder="Ex: Pacote enviado via correios" />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-close-modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Registrar Envio</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ============================================== -->
+  <!-- MODALS: FOODS -->
+  <!-- ============================================== -->
+  
+  <!-- 1. Add Food Ingredient -->
+  <div id="modal-food-add-ing" class="modal-overlay">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3>Cadastrar Item de Alimento (Insumo)</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <form id="food-add-ing-form">
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="food-ing-name">Nome do Alimento</label>
+            <input type="text" id="food-ing-name" placeholder="Ex: Peito de Frango, Arroz Integral, Ovos" required />
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="food-ing-unit">Unidade de Medida</label>
+              <input type="text" id="food-ing-unit" placeholder="Ex: kg, unidades, g" required />
+            </div>
+            <div class="form-group">
+              <label for="food-ing-min">Alerta de Estoque Mínimo</label>
+              <input type="number" step="0.1" id="food-ing-min" placeholder="Ex: 2 (kg)" required />
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-close-modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Salvar Alimento</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 2. Purchase Food Item -->
+  <div id="modal-food-purchase" class="modal-overlay">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3>Registrar Compra de Alimentos</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <form id="food-purchase-form">
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="food-pur-ing-select">Selecione o Alimento</label>
+            <select id="food-pur-ing-select" required></select>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="food-pur-qty">Quantidade Comprada</label>
+              <input type="number" step="0.01" id="food-pur-qty" placeholder="Ex: 3 (kg)" required />
+            </div>
+            <div class="form-group">
+              <label for="food-pur-cost">Valor Total Pago (R$)</label>
+              <input type="number" step="0.01" id="food-pur-cost" placeholder="Ex: 65.00" required />
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="food-pur-date">Data da Compra</label>
+            <input type="date" id="food-pur-date" required />
+          </div>
+          <div class="form-group">
+            <label for="food-pur-notes">Observações</label>
+            <input type="text" id="food-pur-notes" placeholder="Ex: Feira de Domingo, Supermercado" />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-close-modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Registrar Compra</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 3. Add Meal Prep Recipe -->
+  <div id="modal-food-recipe" class="modal-overlay">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3>Criar Receita de Refeição (Marmita)</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <form id="food-recipe-form">
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="food-rec-name">Nome da Refeição Pronta</label>
+            <input type="text" id="food-rec-name" placeholder="Ex: Marmita Fit Frango e Arroz, Aveia Noturna" required />
+          </div>
+          <div class="form-group">
+            <label for="food-rec-unit">Unidade do Prato</label>
+            <input type="text" id="food-rec-unit" placeholder="Ex: marmita, porção, pote" required />
+          </div>
+          
+          <div class="form-group">
+            <label>Ingredientes Usados (por porção/marmita)</label>
+            <div id="food-recipe-ingredients-builder" class="recipe-builder">
+              <!-- Dynamically populated rows -->
+            </div>
+            <button type="button" id="food-recipe-add-ing-row" class="btn btn-secondary btn-sm" style="margin-top: 10px;">+ Adicionar Alimento</button>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-close-modal">Cancelar</button>
+          <button type="submit" class="btn btn-purple">Criar Receita</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 4. Cook Batch of Meal Preps -->
+  <div id="modal-food-production" class="modal-overlay">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3>Registrar Preparo de Refeição</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <form id="food-production-form">
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="food-prod-recipe-select">Receita a Preparar</label>
+            <select id="food-prod-recipe-select" required></select>
+          </div>
+          <div class="form-group">
+            <label for="food-prod-qty">Quantidade Preparada (Rendimento)</label>
+            <input type="number" step="0.01" id="food-prod-qty" placeholder="Ex: 8 (marmitas)" required />
+          </div>
+          <div class="form-group">
+            <label for="food-prod-date">Data de Preparo</label>
+            <input type="date" id="food-prod-date" required />
+          </div>
+          <div class="form-group">
+            <label for="food-prod-notes">Observações</label>
+            <input type="text" id="food-prod-notes" placeholder="Ex: Preparo para a semana" />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-close-modal">Cancelar</button>
+          <button type="submit" class="btn btn-purple">Registrar Preparo</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 5. Consume Food or Prepared Meal -->
+  <div id="modal-food-usage" class="modal-overlay">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3>Registrar Envio / Consumo</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <form id="food-usage-form">
+        <div class="modal-body">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="food-use-type-select">Tipo de Operação</label>
+              <select id="food-use-type-select" required>
+                <option value="product">Refeição Pronta (Marmita)</option>
+                <option value="ingredient">Alimento Cru (Ingrediente Avulso)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="food-use-item-select">Selecione o Item</label>
+              <select id="food-use-item-select" required></select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="food-use-recipient-select">Destinatário (Para quem?)</label>
+            <select id="food-use-recipient-select" required></select>
+          </div>
+          <div class="form-group">
+            <label for="food-use-qty">Quantidade Enviada/Usada</label>
+            <input type="number" step="0.01" id="food-use-qty" placeholder="Ex: 1" required />
+          </div>
+          <div class="form-group">
+            <label for="food-use-date">Data</label>
+            <input type="date" id="food-use-date" required />
+          </div>
+          <div class="form-group">
+            <label for="food-use-notes">Observações</label>
+            <input type="text" id="food-use-notes" placeholder="Ex: Almoço de terça-feira" />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-close-modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Registrar Operação</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Shared Edit Ingredient Modal -->
+  <div id="modal-edit-ingredient" class="modal-overlay">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3>Editar Insumo / Alimento</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <form id="edit-ing-form">
+        <input type="hidden" id="edit-ing-id" />
+        <input type="hidden" id="edit-ing-category" />
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="edit-ing-name">Nome do Item</label>
+            <input type="text" id="edit-ing-name" required />
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="edit-ing-unit">Unidade de Medida</label>
+              <input type="text" id="edit-ing-unit" required />
+            </div>
+            <div class="form-group">
+              <label for="edit-ing-min">Alerta de Estoque Mínimo</label>
+              <input type="number" step="0.1" id="edit-ing-min" required />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="edit-ing-stock">Estoque Atual</label>
+              <input type="number" step="0.01" id="edit-ing-stock" required />
+            </div>
+            <div class="form-group">
+              <label for="edit-ing-cost">Custo Médio Unitário (R$)</label>
+              <input type="number" step="0.0001" id="edit-ing-cost" required />
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-close-modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Salvar Alterações</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Load Application Controller -->
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
