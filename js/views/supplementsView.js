@@ -16,8 +16,24 @@ export const supplementsView = {
   },
 
   registerEventListeners() {
-    // 1. Add Ingredient Form
     const addIngForm = document.getElementById('supp-add-ing-form');
+    const subtypeSelect = document.getElementById('supp-ing-subtype');
+    const unitInput = document.getElementById('supp-ing-unit');
+
+    if (subtypeSelect && unitInput) {
+      subtypeSelect.addEventListener('change', () => {
+        if (subtypeSelect.value === 'capsula') {
+          unitInput.value = 'un';
+          unitInput.readOnly = true;
+          unitInput.style.background = 'rgba(0,0,0,0.2)';
+        } else {
+          unitInput.value = '';
+          unitInput.readOnly = false;
+          unitInput.style.background = '';
+        }
+      });
+    }
+
     if (addIngForm) {
       addIngForm.addEventListener('submit', (e) => {
         e.preventDefault();
@@ -29,6 +45,10 @@ export const supplementsView = {
         try {
           store.addIngredient(this.category, { name, unit, minStock, subType });
           addIngForm.reset();
+          if (unitInput) {
+            unitInput.readOnly = false;
+            unitInput.style.background = '';
+          }
           this.closeModal('modal-supp-add-ing');
           window.dispatchEvent(new Event('storeUpdated'));
         } catch (err) {

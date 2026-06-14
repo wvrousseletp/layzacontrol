@@ -103,6 +103,11 @@ function initApp() {
     if (closeBtn) {
       closeBtn.addEventListener('click', () => {
         modal.classList.remove('active');
+        // Extra: reset NFC modal state and stop camera if it was the NFC modal
+        if (modal.id === 'modal-food-nfc-import') {
+          window.foodsViewRef?._resetNFCModal();
+          window.foodsViewRef?.stopCameraScan();
+        }
       });
     }
 
@@ -111,6 +116,10 @@ function initApp() {
     if (cancelBtn) {
       cancelBtn.addEventListener('click', () => {
         modal.classList.remove('active');
+        if (modal.id === 'modal-food-nfc-import') {
+          window.foodsViewRef?._resetNFCModal();
+          window.foodsViewRef?.stopCameraScan();
+        }
       });
     }
   });
