@@ -80,6 +80,14 @@ export const peopleView = {
         this.selectedPersonId = id;
         this.render(); // Re-render list to show active state
         this.renderIndividualHistory(id);
+
+        // Scroll to history panel on mobile devices
+        if (window.innerWidth < 1100) {
+          const histPanel = document.getElementById('people-history-panel');
+          if (histPanel) {
+            histPanel.scrollIntoView({ behavior: 'smooth' });
+          }
+        }
       });
     });
 
