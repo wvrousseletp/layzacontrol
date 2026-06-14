@@ -195,6 +195,35 @@ export const supplementsView = {
       document.getElementById('supp-use-date').value = new Date().toISOString().split('T')[0];
       this.openModal('modal-supp-usage');
     });
+
+    // Live filter: Insumos table
+    const suppIngFilter = document.getElementById('supp-ing-filter');
+    if (suppIngFilter) {
+      suppIngFilter.addEventListener('input', () => {
+        this.applyTableFilter('supp-ing-table-body', suppIngFilter.value);
+      });
+    }
+
+    // Live filter: Produtos prontos table
+    const suppProdFilter = document.getElementById('supp-prod-filter');
+    if (suppProdFilter) {
+      suppProdFilter.addEventListener('input', () => {
+        this.applyTableFilter('supp-prod-table-body', suppProdFilter.value);
+      });
+    }
+  },
+
+  // Filters table rows whose first <td> text matches the query (case-insensitive)
+  applyTableFilter(tbodyId, query) {
+    const tbody = document.getElementById(tbodyId);
+    if (!tbody) return;
+    const q = query.trim().toLowerCase();
+    Array.from(tbody.querySelectorAll('tr')).forEach(row => {
+      const firstCell = row.querySelector('td');
+      if (!firstCell) return;
+      const text = firstCell.textContent.toLowerCase();
+      row.style.display = (!q || text.includes(q)) ? '' : 'none';
+    });
   },
 
   // Modal actions
@@ -376,10 +405,12 @@ export const supplementsView = {
                 <strong>R$ ${(i.currentStock * i.averageCost).toFixed(2)}</strong>
                 <div class="table-sub-text">Preço Médio: R$ ${i.averageCost.toFixed(4)}</div>
               </td>
-              <td style="text-align: right; white-space: nowrap;">
+              <td style="text-align: right;">
+                <div style="display:flex; flex-wrap:wrap; gap:4px; justify-content:flex-end;">
                 <button class="btn btn-purple btn-sm compare-ing-btn" data-id="${i.id}">Comparar</button>
                 <button class="btn btn-secondary btn-sm edit-ing-btn" data-id="${i.id}">Editar</button>
                 <button class="btn btn-danger btn-sm delete-ing-btn" data-id="${i.id}">Excluir</button>
+                </div>
               </td>
             </tr>
           `;
@@ -467,9 +498,11 @@ export const supplementsView = {
                 <strong>R$ ${(p.currentStock * p.averageCost).toFixed(2)}</strong>
                 <div class="table-sub-text">Custo Unit: R$ ${p.averageCost.toFixed(2)}</div>
               </td>
-              <td style="text-align: right; white-space: nowrap;">
+              <td style="text-align: right;">
+                <div style="display:flex; flex-wrap:wrap; gap:4px; justify-content:flex-end;">
                 <button class="btn btn-secondary btn-sm edit-prod-min-btn" data-id="${p.id}">Alerta</button>
                 <button class="btn btn-danger btn-sm delete-recipe-btn" data-id="${p.recipeId}">Excluir</button>
+                </div>
               </td>
             </tr>
           `;

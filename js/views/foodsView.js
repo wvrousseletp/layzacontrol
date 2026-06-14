@@ -245,7 +245,36 @@ export const foodsView = {
       this.openModal('modal-food-nfc-import');
     });
 
+    // Live filter: Insumos de Alimentos
+    const foodIngFilter = document.getElementById('food-ing-filter');
+    if (foodIngFilter) {
+      foodIngFilter.addEventListener('input', () => {
+        this.applyTableFilter('food-ing-table-body', foodIngFilter.value);
+      });
+    }
+
+    // Live filter: Pratos Prontos de Alimentos
+    const foodProdFilter = document.getElementById('food-prod-filter');
+    if (foodProdFilter) {
+      foodProdFilter.addEventListener('input', () => {
+        this.applyTableFilter('food-prod-table-body', foodProdFilter.value);
+      });
+    }
+
     this.registerNFCImportListeners();
+  },
+
+  // Filters table rows whose first <td> text matches the query (case-insensitive)
+  applyTableFilter(tbodyId, query) {
+    const tbody = document.getElementById(tbodyId);
+    if (!tbody) return;
+    const q = query.trim().toLowerCase();
+    Array.from(tbody.querySelectorAll('tr')).forEach(row => {
+      const firstCell = row.querySelector('td');
+      if (!firstCell) return;
+      const text = firstCell.textContent.toLowerCase();
+      row.style.display = (!q || text.includes(q)) ? '' : 'none';
+    });
   },
 
   // Modal actions
@@ -418,10 +447,12 @@ export const foodsView = {
                 <strong>R$ ${(i.currentStock * i.averageCost).toFixed(2)}</strong>
                 <div class="table-sub-text">Preço Médio: R$ ${i.averageCost.toFixed(2)}</div>
               </td>
-              <td style="text-align: right; white-space: nowrap;">
+              <td style="text-align: right;">
+                <div style="display:flex; flex-wrap:wrap; gap:4px; justify-content:flex-end;">
                 <button class="btn btn-purple btn-sm compare-ing-btn" data-id="${i.id}">Comparar</button>
                 <button class="btn btn-secondary btn-sm edit-ing-btn" data-id="${i.id}">Editar</button>
                 <button class="btn btn-danger btn-sm delete-ing-btn" data-id="${i.id}">Excluir</button>
+                </div>
               </td>
             </tr>
           `;
@@ -503,9 +534,11 @@ export const foodsView = {
                 <strong>R$ ${(p.currentStock * p.averageCost).toFixed(2)}</strong>
                 <div class="table-sub-text">Custo Unit: R$ ${p.averageCost.toFixed(2)}</div>
               </td>
-              <td style="text-align: right; white-space: nowrap;">
+              <td style="text-align: right;">
+                <div style="display:flex; flex-wrap:wrap; gap:4px; justify-content:flex-end;">
                 <button class="btn btn-secondary btn-sm edit-prod-min-btn" data-id="${p.id}">Alerta</button>
                 <button class="btn btn-danger btn-sm delete-recipe-btn" data-id="${p.recipeId}">Excluir</button>
+                </div>
               </td>
             </tr>
           `;

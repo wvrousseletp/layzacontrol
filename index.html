@@ -43,13 +43,22 @@
           <ul class="nav-menu">
             <li class="nav-item active">
               <button data-target="view-supplements">
-                <svg viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+                <!-- Capsule icon -->
+                <svg viewBox="0 0 24 24">
+                  <path d="M9 3h6a4 4 0 0 1 4 4v10a4 4 0 0 1-4 4H9a4 4 0 0 1-4-4V7a4 4 0 0 1 4-4z"/>
+                  <line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
                 Suplementos
               </button>
             </li>
             <li class="nav-item">
               <button data-target="view-foods">
-                <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path></svg>
+                <!-- Plate/food icon -->
+                <svg viewBox="0 0 24 24">
+                  <circle cx="12" cy="12" r="9"/>
+                  <path d="M8 12h8M12 8v8"/>
+                  <path d="M5.3 5.3A9 9 0 0 1 21 12"/>
+                </svg>
                 Alimentos
               </button>
             </li>
@@ -188,7 +197,11 @@
           <div class="columns-2">
             <!-- Raw Ingredients Table -->
             <div class="glass-panel">
-              <h3 style="font-family: 'Montserrat', sans-serif; margin-bottom: 16px;">1. Matérias-Primas (Insumos em Estoque)</h3>
+              <h3 style="font-family: 'Montserrat', sans-serif; margin-bottom: 12px;">1. Matérias-Primas (Insumos em Estoque)</h3>
+              <div style="position: relative; margin-bottom: 12px;">
+                <svg style="position:absolute; left:10px; top:50%; transform:translateY(-50%); opacity:0.4; pointer-events:none;" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <input type="text" id="supp-ing-filter" placeholder="Filtrar por nome..." style="padding: 8px 10px 8px 34px; width: 100%; font-size: 0.85rem;" />
+              </div>
               <div class="table-container">
                 <table class="compact-table">
                   <thead>
@@ -208,7 +221,11 @@
 
             <!-- Formulas and Finished Stock Table -->
             <div class="glass-panel">
-              <h3 style="font-family: 'Montserrat', sans-serif; margin-bottom: 16px;">2. Suplementos Prontos (Fórmulas e Estoque)</h3>
+              <h3 style="font-family: 'Montserrat', sans-serif; margin-bottom: 12px;">2. Suplementos Prontos (Fórmulas e Estoque)</h3>
+              <div style="position: relative; margin-bottom: 12px;">
+                <svg style="position:absolute; left:10px; top:50%; transform:translateY(-50%); opacity:0.4; pointer-events:none;" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <input type="text" id="supp-prod-filter" placeholder="Filtrar por nome..." style="padding: 8px 10px 8px 34px; width: 100%; font-size: 0.85rem;" />
+              </div>
               <div class="table-container">
                 <table class="compact-table">
                   <thead>
@@ -340,7 +357,11 @@
           <div class="columns-2">
             <!-- Food Pantry Table -->
             <div class="glass-panel">
-              <h3 style="font-family: 'Montserrat', sans-serif; margin-bottom: 16px;">1. Despensa (Ingredientes em Estoque)</h3>
+              <h3 style="font-family: 'Montserrat', sans-serif; margin-bottom: 12px;">1. Despensa (Ingredientes em Estoque)</h3>
+              <div style="position: relative; margin-bottom: 12px;">
+                <svg style="position:absolute; left:10px; top:50%; transform:translateY(-50%); opacity:0.4; pointer-events:none;" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <input type="text" id="food-ing-filter" placeholder="Filtrar por nome..." style="padding: 8px 10px 8px 34px; width: 100%; font-size: 0.85rem;" />
+              </div>
               <div class="table-container">
                 <table class="compact-table">
                   <thead>
@@ -360,7 +381,11 @@
 
             <!-- Meal Prep / Prepared Meals Table -->
             <div class="glass-panel">
-              <h3 style="font-family: 'Montserrat', sans-serif; margin-bottom: 16px;">2. Pratos Preparados (Misturas / Receitas Prontas)</h3>
+              <h3 style="font-family: 'Montserrat', sans-serif; margin-bottom: 12px;">2. Pratos Preparados (Misturas / Receitas Prontas)</h3>
+              <div style="position: relative; margin-bottom: 12px;">
+                <svg style="position:absolute; left:10px; top:50%; transform:translateY(-50%); opacity:0.4; pointer-events:none;" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <input type="text" id="food-prod-filter" placeholder="Filtrar por nome..." style="padding: 8px 10px 8px 34px; width: 100%; font-size: 0.85rem;" />
+              </div>
               <div class="table-container">
                 <table class="compact-table">
                   <thead>
@@ -1121,9 +1146,9 @@
 
           <div class="form-group">
             <label for="food-nfc-url">Ou Cole o Link do QR Code (URL da NFC-e)</label>
-            <div style="display: flex; gap: 10px;">
-              <input type="url" id="food-nfc-url" placeholder="https://www.sefaz.rs.gov.br/NFCE/NFCE-COM.aspx..." style="flex-grow: 1;" />
-              <button type="button" id="btn-food-nfc-load-url" class="btn btn-secondary" style="height: 44px; white-space: nowrap;">Carregar Link</button>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+              <input type="url" id="food-nfc-url" placeholder="https://www.sefaz.rs.gov.br/NFCE/NFCE-COM.aspx..." style="flex-grow: 1; min-width: 0;" />
+              <button type="button" id="btn-food-nfc-load-url" class="btn btn-secondary" style="height: 44px; flex-shrink: 0;">Carregar Link</button>
             </div>
           </div>
 

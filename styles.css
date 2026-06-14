@@ -41,6 +41,11 @@
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+  min-width: 0; /* prevents flex/grid children from overflowing their container */
+}
+
+html {
+  overflow-x: hidden; /* belt-and-suspenders: block horizontal scroll at root */
 }
 
 body {
@@ -50,6 +55,8 @@ body {
   background-attachment: fixed;
   color: var(--text-main);
   min-height: 100vh;
+  width: 100%;
+  max-width: 100vw;
   display: flex;
   overflow-x: hidden;
   line-height: 1.5;
@@ -78,8 +85,10 @@ body {
 /* App Layout */
 .app-container {
   display: flex;
-  width: 100vw;
+  width: 100%;
+  max-width: 100%;
   min-height: 100vh;
+  overflow-x: hidden;
 }
 
 /* Sidebar Navigation */
@@ -189,9 +198,11 @@ body {
   flex-grow: 1;
   padding: 40px;
   overflow-y: auto;
+  overflow-x: hidden;
   max-width: 1600px;
   margin: 0 auto;
   width: calc(100% - 280px);
+  min-width: 0;
 }
 
 /* View Sections */
@@ -419,7 +430,9 @@ body {
 /* STOCK ITEMS & TABLES */
 .table-container {
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
   margin-top: 12px;
+  max-width: 100%;
 }
 
 table {
@@ -1023,10 +1036,24 @@ select option {
   
   .main-content {
     width: 100%;
+    max-width: 100%;
     padding: 20px 12px;
     padding-top: 84px;
     padding-bottom: 80px;
     margin: 0;
+    overflow-x: hidden;
+    min-width: 0;
+  }
+
+  /* Prevent any direct child of main from expanding beyond the viewport */
+  .main-content > * {
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .view-section {
+    max-width: 100%;
+    overflow-x: hidden;
   }
   
   .header-row {
@@ -1140,10 +1167,53 @@ select option {
     flex: 1;
     text-align: center;
     padding: 10px;
+    font-size: 0.8rem;
   }
   
   .dashboard-layout, .columns-2 {
     gap: 16px;
+  }
+
+  /* Contain tables so they never push the page wide */
+  .glass-panel {
+    overflow-x: hidden;
+  }
+
+  .table-container {
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Table action columns: stack buttons vertically on phones */
+  td[style*="white-space: nowrap"],
+  td[style*="white-space:nowrap"] {
+    white-space: normal !important;
+  }
+
+  /* Action button group inside table cells */
+  td .btn-sm + .btn-sm {
+    margin-top: 4px;
+  }
+
+  /* Clamp any inline max-width that leaks outside viewport */
+  [style*="max-width: 280px"] {
+    max-width: 100% !important;
+  }
+
+  /* Video element for camera scanner */
+  #food-nfc-video {
+    max-width: 100% !important;
+    height: auto !important;
+  }
+
+  /* NFC URL row: stack input and button vertically */
+  #food-nfc-url {
+    width: 100% !important;
+  }
+
+  div[style*="display: flex; gap: 10px"] {
+    flex-wrap: wrap;
   }
 }
 

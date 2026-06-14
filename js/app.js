@@ -259,9 +259,11 @@ function initApp() {
               <td>${q.quantity} ${ing.unit} por R$ ${q.totalCost.toFixed(2)}</td>
               <td><strong>R$ ${q.unitPrice.toFixed(4)}</strong> / ${ing.unit}</td>
               <td><span style="opacity:0.75; font-size:0.8rem;">${q.notes || '-'}</span></td>
-              <td style="text-align: right; white-space: nowrap;">
+              <td style="text-align: right;">
+                <div style="display:flex; flex-wrap:wrap; gap:4px; justify-content:flex-end;">
                 <button class="btn btn-primary btn-sm use-quote-btn" data-store="${q.store}" data-qty="${q.quantity}" data-cost="${q.totalCost}">Comprar</button>
                 <button class="btn btn-danger btn-sm delete-quote-btn" data-id="${q.id}">Excluir</button>
+                </div>
               </td>
             </tr>
           `;
