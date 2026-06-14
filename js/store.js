@@ -12,16 +12,16 @@ function getInitialState() {
     supplements: {
       ingredients: [], // Raw materials (insumos)
       recipes: [],     // Formulas/recipes
-      products: []     // Finished products
+      products: [],    // Finished products
+      quotes: []       // Price quotes
     },
     foods: {
       ingredients: [], // Raw food items
       recipes: [],     // Prepared recipes (e.g. marmitas)
-      products: []     // Finished foods/prepared meals
+      products: [],    // Finished foods/prepared meals
+      quotes: []       // Price quotes
     },
-    people: [
-      { id: 'self', name: 'Consumo Próprio' }
-    ],
+    people: [],
     transactions: [] // Financial & inventory logs
   };
 }
@@ -40,11 +40,47 @@ class StorageManager {
           const parsed = JSON.parse(data);
           // Ensure all properties exist in case of schema updates
           const fresh = getInitialState();
+
+          // Migrate: remove 'self' from people and update transactions
+          let people = parsed.people || [];
+          people = people.filter(p => p.id !== 'self');
+
+          const transactions = (parsed.transactions || []).map(t => {
+            let updated = { ...t };
+            if (t.recipientId === 'self') {
+              updated.recipientId = '';
+              updated.recipientName = 'Consumo Próprio';
+            }
+            if (updated.type === 'purchase' && updated.store === undefined) {
+              updated.store = 'Desconhecido';
+            }
+            return updated;
+          });
+
+          const supplements = { ...fresh.supplements, ...parsed.supplements };
+          const foods = { ...fresh.foods, ...parsed.foods };
+
+          // Migrate ingredients to have a subType
+          if (supplements.ingredients) {
+            supplements.ingredients.forEach(i => {
+              if (!i.subType) i.subType = 'ingrediente';
+            });
+          }
+          if (foods.ingredients) {
+            foods.ingredients.forEach(i => {
+              if (!i.subType) i.subType = 'ingrediente';
+            });
+          }
+
+          // Ensure quotes array exists
+          if (!supplements.quotes) supplements.quotes = [];
+          if (!foods.quotes) foods.quotes = [];
+
           return {
-            supplements: { ...fresh.supplements, ...parsed.supplements },
-            foods: { ...fresh.foods, ...parsed.foods },
-            people: parsed.people || fresh.people,
-            transactions: parsed.transactions || []
+            supplements,
+            foods,
+            people: people,
+            transactions: transactions
           };
         }
       }
@@ -110,9 +146,6 @@ class StorageManager {
   }
 
   deletePerson(id) {
-    if (id === 'self') {
-      throw new Error("Não é possível excluir o destinatário padrão 'Consumo Próprio'.");
-    }
     const index = this.state.people.findIndex(p => p.id === id);
     if (index !== -1) {
       // Check if they have transaction history
@@ -128,11 +161,12 @@ class StorageManager {
   }
 
   // CRUD for Ingredients
-  addIngredient(category, { name, unit, minStock = 0 }) {
+  addIngredient(category, { name, unit, minStock = 0, subType = 'ingrediente' }) {
     const ingredient = {
       id: generateId(),
       name: name.trim(),
       unit: unit.trim(),
+      subType: subType.trim(), // 'ingrediente' or 'capsula'
       currentStock: 0,
       minStock: parseFloat(minStock) || 0,
       averageCost: 0,
@@ -186,7 +220,7 @@ class StorageManager {
   }
 
   // CRUD for Recipes
-  addRecipe(category, { name, unit, ingredients }) {
+  addRecipe(category, { name, unit, ingredients, capsuleId = '', capsuleQty = 0 }) {
     // ingredients should be array of { ingredientId, quantity }
     const recipe = {
       id: generateId(),
@@ -195,7 +229,9 @@ class StorageManager {
       ingredients: ingredients.map(i => ({
         ingredientId: i.ingredientId,
         quantity: parseFloat(i.quantity) || 0
-      }))
+      })),
+      capsuleId: capsuleId || '',
+      capsuleQty: parseFloat(capsuleQty) || 0
     };
     
     this.state[category].recipes.push(recipe);
@@ -251,10 +287,79 @@ class StorageManager {
     return null;
   }
 
+  // QUOTES (Cotações de Preços)
+  getQuotes(category, ingredientId) {
+    const list = this.state[category].quotes || [];
+    return list
+      .filter(q => q.ingredientId === ingredientId)
+      .map(q => ({
+        ...q,
+        unitPrice: q.quantity > 0 ? q.totalCost / q.quantity : 0
+      }))
+      .sort((a, b) => a.unitPrice - b.unitPrice); // Cheapest first
+  }
+
+  addQuote(category, { ingredientId, storeName, quantity, totalCost, date, notes = '' }) {
+    if (!storeName || !storeName.trim()) throw new Error("O nome da loja/fornecedor é obrigatório.");
+    const qty = parseFloat(quantity);
+    const cost = parseFloat(totalCost);
+    if (qty <= 0 || cost < 0) throw new Error("Quantidade e valor devem ser positivos.");
+
+    if (!this.state[category].quotes) {
+      this.state[category].quotes = [];
+    }
+
+    const quote = {
+      id: generateId(),
+      ingredientId,
+      store: storeName.trim(),
+      quantity: qty,
+      totalCost: cost,
+      date: date || new Date().toISOString().split('T')[0],
+      notes: notes.trim()
+    };
+
+    this.state[category].quotes.push(quote);
+    this.save();
+    return quote;
+  }
+
+  deleteQuote(category, id) {
+    const list = this.state[category].quotes || [];
+    const index = list.findIndex(q => q.id === id);
+    if (index !== -1) {
+      list.splice(index, 1);
+      this.save();
+      return true;
+    }
+    return false;
+  }
+
+  getCheapestPurchaseInfo(category, ingredientId) {
+    const purchases = this.getTransactions(category)
+      .filter(t => t.type === 'purchase' && t.itemId === ingredientId && t.quantity > 0);
+    
+    if (purchases.length === 0) return null;
+    
+    return purchases.reduce((cheapest, current) => {
+      const currentUnit = current.totalCost / current.quantity;
+      const cheapestUnit = cheapest.totalCost / cheapest.quantity;
+      return currentUnit < cheapestUnit ? current : cheapest;
+    });
+  }
+
+  getLastPurchaseInfo(category, ingredientId) {
+    const purchases = this.getTransactions(category)
+      .filter(t => t.type === 'purchase' && t.itemId === ingredientId);
+    
+    if (purchases.length === 0) return null;
+    return purchases[0]; // transactions are already sorted newest first
+  }
+
   // TRANSACTIONS
   
   // 1. Purchase (Comprar Insumo)
-  recordPurchase(category, { ingredientId, quantity, totalCost, date, notes = '' }) {
+  recordPurchase(category, { ingredientId, quantity, totalCost, date, notes = '', store = '' }) {
     const list = this.state[category].ingredients;
     const ing = list.find(item => item.id === ingredientId);
     if (!ing) throw new Error("Insumo não encontrado.");
@@ -284,6 +389,7 @@ class StorageManager {
       unit: ing.unit,
       unitPrice,
       totalCost: cost,
+      store: (store || '').trim() || 'Desconhecido',
       notes: notes.trim()
     };
 
@@ -326,18 +432,41 @@ class StorageManager {
       });
     });
 
+    // Validate capsule stock if recipe requires capsules
+    let capsuleIng = null;
+    let totalCapsulesNeeded = 0;
+    let capsuleCostContrib = 0;
+    if (recipe.capsuleId && recipe.capsuleQty > 0) {
+      capsuleIng = ingredients.find(i => i.id === recipe.capsuleId);
+      if (!capsuleIng) {
+        missing.push(`Cápsula/Embalagem ID ${recipe.capsuleId} não encontrada.`);
+      } else {
+        totalCapsulesNeeded = recipe.capsuleQty * yieldQty;
+        if (capsuleIng.currentStock < totalCapsulesNeeded) {
+          missing.push(`${capsuleIng.name} (Necessário: ${totalCapsulesNeeded.toFixed(1)}${capsuleIng.unit}, Disponível: ${capsuleIng.currentStock.toFixed(1)}${capsuleIng.unit})`);
+        }
+      }
+    }
+
     if (missing.length > 0) {
       throw new Error("Estoque insuficiente para os seguintes insumos:\n" + missing.join("\n"));
     }
 
-    // Deduct ingredients from stock
-    let totalCostOfProduction = 0;
+    // Deduct ingredients from stock (already validated)
+    let finalCostOfProduction = 0;
     usageList.forEach(({ ing, totalNeeded, costContrib }) => {
       ing.currentStock -= totalNeeded;
-      totalCostOfProduction += costContrib;
+      finalCostOfProduction += costContrib;
     });
 
-    const computedUnitPrice = yieldQty > 0 ? totalCostOfProduction / yieldQty : 0;
+    // Deduct capsules from stock and add to production cost
+    if (capsuleIng && totalCapsulesNeeded > 0) {
+      capsuleIng.currentStock -= totalCapsulesNeeded;
+      capsuleCostContrib = totalCapsulesNeeded * capsuleIng.averageCost;
+      finalCostOfProduction += capsuleCostContrib;
+    }
+
+    const computedUnitPrice = yieldQty > 0 ? finalCostOfProduction / yieldQty : 0;
 
     // Update product stock and average cost
     const products = this.state[category].products;
@@ -357,7 +486,7 @@ class StorageManager {
     }
 
     const currentTotalCost = product.currentStock * product.averageCost;
-    const newTotalCost = currentTotalCost + totalCostOfProduction;
+    const newTotalCost = currentTotalCost + finalCostOfProduction;
     product.currentStock += yieldQty;
     product.averageCost = product.currentStock > 0 ? newTotalCost / product.currentStock : 0;
 
@@ -373,7 +502,7 @@ class StorageManager {
       quantity: yieldQty,
       unit: product.unit,
       unitPrice: computedUnitPrice,
-      totalCost: totalCostOfProduction,
+      totalCost: finalCostOfProduction,
       notes: notes.trim() || `Produzido usando a fórmula: ${recipe.name}`
     };
 
@@ -406,7 +535,7 @@ class StorageManager {
 
     // Resolve recipient name
     const person = this.state.people.find(p => p.id === recipientId);
-    const recipientName = person ? person.name : 'Desconhecido';
+    const recipientName = person ? person.name : 'Consumo Próprio';
 
     // Log the Usage transaction
     const transaction = {
@@ -479,6 +608,13 @@ class StorageManager {
               ing.currentStock += (req.quantity * quantity);
             }
           });
+          // Restore capsules if any
+          if (recipe.capsuleId && recipe.capsuleQty > 0) {
+            const capsuleIng = this.state[category].ingredients.find(i => i.id === recipe.capsuleId);
+            if (capsuleIng) {
+              capsuleIng.currentStock += (recipe.capsuleQty * quantity);
+            }
+          }
         }
 
         // Revert product stock and average cost

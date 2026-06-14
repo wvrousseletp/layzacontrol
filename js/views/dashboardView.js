@@ -26,6 +26,7 @@ export const dashboardView = {
   },
 
   render() {
+    if (!document.getElementById('dash-total-spent')) return;
     const summary = store.getFinancialSummary();
     const alerts = store.getLowStockItems();
     
@@ -95,7 +96,7 @@ export const dashboardView = {
           const formattedValue = t.type === 'usage' ? `- R$ ${t.totalCost.toFixed(2)}` : `R$ ${t.totalCost.toFixed(2)}`;
           const valueStyle = t.type === 'usage' ? 'color: var(--accent-cyan);' : 'font-weight: 600;';
 
-          const recipientText = t.recipient ? ` <span style="color: var(--accent-cyan); font-size: 0.75rem;">(Para: ${t.recipient})</span>` : '';
+          const recipientText = t.recipientName ? ` <span style="color: var(--accent-cyan); font-size: 0.75rem;">(Para: ${t.recipientName})</span>` : '';
 
           return `
             <tr>

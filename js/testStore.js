@@ -123,4 +123,109 @@ const alerts = store.getLowStockItems('supplements');
 // Mas o produto pronto Pré-Treino Focus tem minStock = 0 e currentStock = 0 -> alerta de estoque (current <= min -> 0 <= 0 -> true!)
 assert(alerts.some(a => a.name === 'Pré-Treino Focus'), "Alerta de estoque baixo ativado para o produto com estoque zero");
 
+// Test 10: Fluxo completo de cápsulas no estoque e fabricação
+console.log("Iniciando Teste 10: Fluxo completo de cápsulas...");
+const CapsulaGel = store.addIngredient('supplements', { name: 'Cápsula Gelatina n00', unit: 'un', minStock: 20, subType: 'capsula' });
+assert(CapsulaGel.subType === 'capsula', "Tipo de insumo cápsula foi registrado corretamente");
+
+// Compra de cápsulas
+store.recordPurchase('supplements', {
+  ingredientId: CapsulaGel.id,
+  quantity: 100,
+  totalCost: 20, // R$ 0.20 por cápsula
+  date: '2026-06-14'
+});
+const updatedCapsula = store.getIngredients('supplements').find(i => i.id === CapsulaGel.id);
+assert(updatedCapsula.currentStock === 100, "Estoque de cápsulas é 100");
+assert(updatedCapsula.averageCost === 0.20, "Custo médio da cápsula é R$ 0.20");
+
+// Nova receita usando a cápsula (2 cápsulas por dose + 5g de Creatina)
+// Custo por dose esperado: (5g * 0.25 = R$ 1.25) + (2 * R$ 0.20 = R$ 0.40) = R$ 1.65
+const recipeComCapsula = store.addRecipe('supplements', {
+  name: 'Creatina Capsulada',
+  unit: 'dose',
+  ingredients: [
+    { ingredientId: Creatina.id, quantity: 5 }
+  ],
+  capsuleId: CapsulaGel.id,
+  capsuleQty: 2
+});
+
+assert(recipeComCapsula.capsuleId === CapsulaGel.id, "Capsule ID gravado na receita");
+assert(recipeComCapsula.capsuleQty === 2, "Capsule Qty gravado na receita");
+
+// Registrar produção de 10 doses
+const prodTxCaps = store.recordProduction('supplements', {
+  recipeId: recipeComCapsula.id,
+  yieldQuantity: 10,
+  date: '2026-06-14'
+});
+
+const capsAfterProd = store.getIngredients('supplements').find(i => i.id === CapsulaGel.id);
+assert(capsAfterProd.currentStock === 80, "Estoque de cápsulas reduziu de 100 para 80 (deduziu 20)");
+
+const productCaps = store.getProducts('supplements').find(p => p.recipeId === recipeComCapsula.id);
+assert(productCaps.currentStock === 10, "Estoque do produto pronto capsulado aumentou para 10");
+assert(productCaps.averageCost === 1.65, "Custo médio de fabricação com cápsula está correto (1.65 por dose)");
+assert(prodTxCaps.totalCost === 16.5, "Custo total da transação de produção com cápsula está correto (16.5)");
+
+// Reverter a produção
+store.deleteTransaction(prodTxCaps.id);
+const capsAfterRevert = store.getIngredients('supplements').find(i => i.id === CapsulaGel.id);
+assert(capsAfterRevert.currentStock === 100, "Estoque de cápsulas foi estornado com sucesso de volta para 100");
+
+// Test 11: Cotações e Comparador de Preços
+console.log("Iniciando Teste 11: Cotações e Comparador de Preços...");
+const quoteA = store.addQuote('supplements', {
+  ingredientId: Creatina.id,
+  storeName: 'Loja A',
+  quantity: 500,
+  totalCost: 100, // R$ 0.20/g
+  date: '2026-06-14',
+  notes: 'Frete grátis'
+});
+const quoteB = store.addQuote('supplements', {
+  ingredientId: Creatina.id,
+  storeName: 'Loja B',
+  quantity: 400,
+  totalCost: 72, // R$ 0.18/g
+  date: '2026-06-14'
+});
+
+const quotes = store.getQuotes('supplements', Creatina.id);
+assert(quotes.length === 2, "Cotações registradas com sucesso");
+assert(quotes[0].store === 'Loja B', "A cotação mais barata (Loja B) foi retornada em primeiro");
+assert(quotes[0].unitPrice === 0.18, "Custo unitário da Loja B calculado corretamente");
+
+// Compras reais com local/loja
+const purchaseStoreC = store.recordPurchase('supplements', {
+  ingredientId: Creatina.id,
+  quantity: 200,
+  totalCost: 30, // R$ 0.15/g
+  date: '2026-06-13',
+  store: 'Loja C'
+});
+const purchaseStoreD = store.recordPurchase('supplements', {
+  ingredientId: Creatina.id,
+  quantity: 200,
+  totalCost: 40, // R$ 0.20/g
+  date: '2026-06-14',
+  store: 'Loja D'
+});
+
+const cheapestPurchase = store.getCheapestPurchaseInfo('supplements', Creatina.id);
+assert(cheapestPurchase !== null, "Encontrou compra real mais barata");
+assert(cheapestPurchase.store === 'Loja C', "A compra real mais barata foi na Loja C");
+assert(cheapestPurchase.totalCost / cheapestPurchase.quantity === 0.15, "Custo unitário da compra mais barata está correto");
+
+const lastPurchase = store.getLastPurchaseInfo('supplements', Creatina.id);
+assert(lastPurchase !== null, "Encontrou última compra real");
+assert(lastPurchase.store === 'Loja D', "A última compra registrada foi na Loja D (adicionada por último)");
+
+// Excluir cotação
+store.deleteQuote('supplements', quoteB.id);
+const quotesAfterDelete = store.getQuotes('supplements', Creatina.id);
+assert(quotesAfterDelete.length === 1, "Cotação excluída com sucesso");
+assert(quotesAfterDelete[0].store === 'Loja A', "Sobrou apenas a cotação da Loja A");
+
 console.log("\n🎉 TODOS OS TESTES PASSARAM COM SUCESSO!");

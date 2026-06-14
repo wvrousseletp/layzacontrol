@@ -52,9 +52,7 @@ export const peopleView = {
     }
 
     tableBody.innerHTML = people.map(p => {
-      const deleteBtn = p.id === 'self' 
-        ? '' 
-        : `<button class="btn btn-danger btn-sm delete-person-btn" data-id="${p.id}">Excluir</button>`;
+      const deleteBtn = `<button class="btn btn-danger btn-sm delete-person-btn" data-id="${p.id}">Excluir</button>`;
       
       const activeStyle = this.selectedPersonId === p.id 
         ? 'background: rgba(0, 240, 255, 0.05); font-weight: 600; color: var(--accent-cyan);' 

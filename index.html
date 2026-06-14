@@ -3,30 +3,45 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
   <meta name="description" content="Controle financeiro e de estoque para suplementos e alimentos caseiros.">
-  <title>NutriTrack - Controle de Suplementos e Alimentos</title>
+  <title>Layza Control - Controle de Suplementos e Alimentos</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+  <!-- Global Error Logger Banner -->
+  <div id="global-error-banner" style="display: none; background: #ff4757; color: white; padding: 12px; font-weight: bold; position: fixed; top: 0; left: 0; right: 0; z-index: 99999; text-align: center; font-family: monospace; font-size: 0.9rem; box-shadow: 0 4px 15px rgba(255, 71, 87, 0.4);">
+    <span id="global-error-msg"></span>
+    <button onclick="document.getElementById('global-error-banner').style.display='none'" style="margin-left: 20px; background: rgba(0,0,0,0.2); border: none; color: white; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-weight: bold;">Fechar</button>
+  </div>
+  <script>
+    window.onerror = function(message, source, lineno, colno, error) {
+      const banner = document.getElementById('global-error-banner');
+      const msg = document.getElementById('global-error-msg');
+      if (banner && msg) {
+        const file = source ? source.split('/').pop() : 'script desconhecido';
+        msg.textContent = `Erro JS: ${message} (${file}:${lineno})`;
+        banner.style.display = 'block';
+      }
+      return false;
+    };
+  </script>
+
   <div class="app-container">
     
     <!-- SIDEBAR NAVIGATION -->
     <aside class="sidebar">
       <div>
         <div class="logo-container">
-          <div class="logo-icon">N</div>
-          <span class="logo-text">NutriTrack</span>
+          <div class="logo-icon">L</div>
+          <span class="logo-text">Layza Control</span>
         </div>
         
         <nav>
           <ul class="nav-menu">
             <li class="nav-item active">
-              <button data-target="view-dashboard">
-                <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
-                Dashboard
-              </button>
-            </li>
-            <li class="nav-item">
               <button data-target="view-supplements">
                 <svg viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
                 Suplementos
@@ -55,7 +70,7 @@
       </div>
       
       <div class="sidebar-footer">
-        <p>NutriTrack v1.0.0</p>
+        <p>Layza Control v1.0.0</p>
         <button id="db-reset-btn" class="btn btn-danger btn-sm" style="margin-top: 10px; width: 100%;">Limpar Dados</button>
       </div>
     </aside>
@@ -64,106 +79,9 @@
     <main class="main-content">
       
       <!-- ============================================== -->
-      <!-- VIEW: DASHBOARD -->
-      <!-- ============================================== -->
-      <section id="view-dashboard" class="view-section active">
-        <div class="header-row">
-          <div class="title-group">
-            <h1>Dashboard Financeiro e Estoque</h1>
-            <p>Visão geral de seus investimentos em suplementos e alimentação caseira.</p>
-          </div>
-        </div>
-
-        <!-- Metric Summary Cards -->
-        <div class="summary-grid">
-          <div class="glass-panel summary-card">
-            <div class="card-icon green">💵</div>
-            <div class="card-info">
-              <span class="card-label">Total Comprado</span>
-              <span class="card-value" id="dash-total-spent">R$ 0,00</span>
-            </div>
-          </div>
-          <div class="glass-panel summary-card">
-            <div class="card-icon cyan">📦</div>
-            <div class="card-info">
-              <span class="card-label">Estoque Insumos</span>
-              <span class="card-value" id="dash-raw-value">R$ 0,00</span>
-            </div>
-          </div>
-          <div class="glass-panel summary-card">
-            <div class="card-icon purple">🧪</div>
-            <div class="card-info">
-              <span class="card-label">Estoque Prontos</span>
-              <span class="card-value" id="dash-finished-value">R$ 0,00</span>
-            </div>
-          </div>
-          <div class="glass-panel summary-card">
-            <div class="card-icon orange">🥣</div>
-            <div class="card-info">
-              <span class="card-label">Consumo Geral</span>
-              <span class="card-value" id="dash-usage-cost">R$ 0,00</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="dashboard-layout">
-          <!-- Charts -->
-          <div class="glass-panel">
-            <h3 style="font-family: 'Montserrat', sans-serif; margin-bottom: 20px;">Investimento Mensal (Compras)</h3>
-            <div id="dashboard-financial-chart" class="chart-container">
-              <!-- SVG generated via JS -->
-            </div>
-          </div>
-
-          <!-- Stock Alerts -->
-          <div class="glass-panel">
-            <h3 style="font-family: 'Montserrat', sans-serif; margin-bottom: 20px; color: var(--color-danger);">Alertas de Estoque</h3>
-            <div class="table-container">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Item</th>
-                    <th>Cat.</th>
-                    <th>Tipo</th>
-                    <th>Qtd</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody id="dash-alerts-table-body">
-                  <!-- JS injected -->
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-
-        <!-- Recent Activities -->
-        <div class="glass-panel">
-          <h3 style="font-family: 'Montserrat', sans-serif; margin-bottom: 16px;">Atividades Recentes</h3>
-          <div class="table-container">
-            <table>
-              <thead>
-                <tr>
-                  <th>Data</th>
-                  <th>Operação</th>
-                  <th>Categoria</th>
-                  <th>Item</th>
-                  <th>Quantidade</th>
-                  <th>Valor</th>
-                </tr>
-              </thead>
-              <tbody id="dash-recent-table-body">
-                <!-- JS injected -->
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-
-      <!-- ============================================== -->
       <!-- VIEW: SUPPLEMENTS -->
       <!-- ============================================== -->
-      <section id="view-supplements" class="view-section">
+      <section id="view-supplements" class="view-section active">
         <div class="header-row">
           <div class="title-group">
             <h1>Controle de Suplementos</h1>
@@ -178,74 +96,134 @@
           </div>
         </div>
 
-        <!-- Supplements Summary -->
-        <div class="summary-grid">
-          <div class="glass-panel summary-card glass-panel-accent-purple">
-            <div class="card-icon purple">🛍️</div>
-            <div class="card-info">
-              <span class="card-label">Total Gasto (Insumos)</span>
-              <span class="card-value" id="supp-summary-spent">R$ 0,00</span>
+        <!-- Sub Navigation Tab Selector -->
+        <div class="tab-selector">
+          <button class="tab-btn active" id="supp-tab-dashboard-btn" data-sub-target="supp-sub-dashboard">Painel Geral</button>
+          <button class="tab-btn" id="supp-tab-inventory-btn" data-sub-target="supp-sub-inventory">Estoque e Fórmulas</button>
+        </div>
+
+        <!-- SUB-VIEW: DASHBOARD -->
+        <div id="supp-sub-dashboard" class="sub-view-section active">
+          <!-- Supplements Summary -->
+          <div class="summary-grid">
+            <div class="glass-panel summary-card glass-panel-accent-purple">
+              <div class="card-icon purple">🛍️</div>
+              <div class="card-info">
+                <span class="card-label">Total Gasto (Insumos)</span>
+                <span class="card-value" id="supp-summary-spent">R$ 0,00</span>
+              </div>
+            </div>
+            <div class="glass-panel summary-card glass-panel-accent-purple">
+              <div class="card-icon purple">💾</div>
+              <div class="card-info">
+                <span class="card-label">Valor em Estoque</span>
+                <span class="card-value" id="supp-summary-stock-val">R$ 0,00</span>
+              </div>
+            </div>
+            <div class="glass-panel summary-card glass-panel-accent-purple">
+              <div class="card-icon purple">🔋</div>
+              <div class="card-info">
+                <span class="card-label">Total Enviado</span>
+                <span class="card-value" id="supp-summary-consumption">R$ 0,00</span>
+              </div>
             </div>
           </div>
-          <div class="glass-panel summary-card glass-panel-accent-purple">
-            <div class="card-icon purple">💾</div>
-            <div class="card-info">
-              <span class="card-label">Valor em Estoque</span>
-              <span class="card-value" id="supp-summary-stock-val">R$ 0,00</span>
+
+          <div class="dashboard-layout">
+            <!-- Left Column: Spending Chart & Recent Shipments -->
+            <div>
+              <div class="glass-panel">
+                <h3 style="font-family: 'Montserrat', sans-serif; margin-bottom: 16px;">Histórico de Gastos Mensais</h3>
+                <div class="chart-container" id="supplements-financial-chart">
+                  <!-- SVG Chart -->
+                </div>
+              </div>
+
+              <div class="glass-panel">
+                <h3 style="font-family: 'Montserrat', sans-serif; margin-bottom: 16px;">Envios Recentes</h3>
+                <div class="table-container">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Data</th>
+                        <th>Item</th>
+                        <th>Quantidade</th>
+                        <th>Destinatário</th>
+                      </tr>
+                    </thead>
+                    <tbody id="supp-dash-recent-body">
+                      <!-- JS injected -->
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </div>
-          </div>
-          <div class="glass-panel summary-card glass-panel-accent-purple">
-            <div class="card-icon purple">🔋</div>
-            <div class="card-info">
-              <span class="card-label">Total Consumido</span>
-              <span class="card-value" id="supp-summary-consumption">R$ 0,00</span>
+
+            <!-- Right Column: Low Stock Alerts -->
+            <div>
+              <div class="glass-panel">
+                <h3 style="font-family: 'Montserrat', sans-serif; margin-bottom: 16px;">Alertas de Estoque</h3>
+                <div class="table-container">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Item</th>
+                        <th>Tipo</th>
+                        <th>Estoque</th>
+                        <th>Estado</th>
+                      </tr>
+                    </thead>
+                    <tbody id="supp-dash-alerts-body">
+                      <!-- JS injected -->
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
-        <div class="columns-2">
-          <!-- Raw Ingredients Table -->
-          <div class="glass-panel">
-            <h3 style="font-family: 'Montserrat', sans-serif; margin-bottom: 16px;">1. Matérias-Primas (Insumos em Estoque)</h3>
-            <div class="table-container">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Insumo</th>
-                    <th>Estoque</th>
-                    <th>Alerta Mín</th>
-                    <th>Preço Médio</th>
-                    <th>Valor Estoque</th>
-                    <th>Última Compra</th>
-                    <th style="text-align: right;">Ações</th>
-                  </tr>
-                </thead>
-                <tbody id="supp-ing-table-body">
-                  <!-- JS Injected -->
-                </tbody>
-              </table>
+        <!-- SUB-VIEW: INVENTORY -->
+        <div id="supp-sub-inventory" class="sub-view-section">
+          <div class="columns-2">
+            <!-- Raw Ingredients Table -->
+            <div class="glass-panel">
+              <h3 style="font-family: 'Montserrat', sans-serif; margin-bottom: 16px;">1. Matérias-Primas (Insumos em Estoque)</h3>
+              <div class="table-container">
+                <table class="compact-table">
+                  <thead>
+                    <tr>
+                      <th>Insumo / Compra</th>
+                      <th>Estoque (Mín)</th>
+                      <th>Valor (Preço Médio)</th>
+                      <th style="text-align: right;">Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody id="supp-ing-table-body">
+                    <!-- JS Injected -->
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
 
-          <!-- Formulas and Finished Stock Table -->
-          <div class="glass-panel">
-            <h3 style="font-family: 'Montserrat', sans-serif; margin-bottom: 16px;">2. Suplementos Prontos (Fórmulas e Estoque)</h3>
-            <div class="table-container">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Suplemento / Fórmula</th>
-                    <th>Estoque</th>
-                    <th>Custo Unit.</th>
-                    <th>Valor Estoque</th>
-                    <th>Último Preparo</th>
-                    <th style="text-align: right;">Ações</th>
-                  </tr>
-                </thead>
-                <tbody id="supp-prod-table-body">
-                  <!-- JS Injected -->
-                </tbody>
-              </table>
+            <!-- Formulas and Finished Stock Table -->
+            <div class="glass-panel">
+              <h3 style="font-family: 'Montserrat', sans-serif; margin-bottom: 16px;">2. Suplementos Prontos (Fórmulas e Estoque)</h3>
+              <div class="table-container">
+                <table class="compact-table">
+                  <thead>
+                    <tr>
+                      <th>Fórmula / Preparo</th>
+                      <th>Estoque (Mín)</th>
+                      <th>Valor (Custo Unit.)</th>
+                      <th style="text-align: right;">Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody id="supp-prod-table-body">
+                    <!-- JS Injected -->
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </div>
@@ -258,85 +236,146 @@
         <div class="header-row">
           <div class="title-group">
             <h1>Controle de Alimentos</h1>
-            <p>Gerencie despensa de comida, marmitas preparadas e custos de alimentação.</p>
+            <p>Gerencie despensa de comida, misturas preparadas e custos de alimentação.</p>
           </div>
-          <div class="action-group">
+          <div class="action-group" style="flex-wrap: wrap; gap: 8px;">
             <button id="btn-food-add-ing" class="btn btn-secondary">Adicionar Insumo</button>
-            <button id="btn-food-purchase" class="btn btn-primary">Comprar Comida</button>
+            <button id="btn-food-purchase" class="btn btn-secondary">Registrar Compra</button>
+            <button id="btn-food-nfc-import" class="btn btn-secondary" style="border: 1px solid rgba(0, 240, 255, 0.4); color: #00f0ff;">Importar Nota QR</button>
             <button id="btn-food-recipe" class="btn btn-secondary">Criar Receita</button>
-            <button id="btn-food-production" class="btn btn-purple">Preparar Marmitas</button>
+            <button id="btn-food-production" class="btn btn-purple">Preparar Misturas</button>
             <button id="btn-food-usage" class="btn btn-primary">Registrar Envio/Uso</button>
           </div>
         </div>
 
-        <!-- Foods Summary -->
-        <div class="summary-grid">
-          <div class="glass-panel summary-card glass-panel-accent-cyan">
-            <div class="card-icon cyan">🛒</div>
-            <div class="card-info">
-              <span class="card-label">Total Gasto (Compras)</span>
-              <span class="card-value" id="food-summary-spent">R$ 0,00</span>
+        <!-- Sub Navigation Tab Selector -->
+        <div class="tab-selector">
+          <button class="tab-btn active" id="food-tab-dashboard-btn" data-sub-target="food-sub-dashboard">Painel Geral</button>
+          <button class="tab-btn" id="food-tab-inventory-btn" data-sub-target="food-sub-inventory">Estoque e Receitas</button>
+        </div>
+
+        <!-- SUB-VIEW: DASHBOARD -->
+        <div id="food-sub-dashboard" class="sub-view-section active">
+          <!-- Foods Summary -->
+          <div class="summary-grid">
+            <div class="glass-panel summary-card glass-panel-accent-cyan">
+              <div class="card-icon cyan">🛒</div>
+              <div class="card-info">
+                <span class="card-label">Total Gasto (Compras)</span>
+                <span class="card-value" id="food-summary-spent">R$ 0,00</span>
+              </div>
+            </div>
+            <div class="glass-panel summary-card glass-panel-accent-cyan">
+              <div class="card-icon cyan">🥗</div>
+              <div class="card-info">
+                <span class="card-label">Valor em Estoque</span>
+                <span class="card-value" id="food-summary-stock-val">R$ 0,00</span>
+              </div>
+            </div>
+            <div class="glass-panel summary-card glass-panel-accent-cyan">
+              <div class="card-icon cyan">🍴</div>
+              <div class="card-info">
+                <span class="card-label">Total Consumido/Enviado</span>
+                <span class="card-value" id="food-summary-consumption">R$ 0,00</span>
+              </div>
             </div>
           </div>
-          <div class="glass-panel summary-card glass-panel-accent-cyan">
-            <div class="card-icon cyan">🥗</div>
-            <div class="card-info">
-              <span class="card-label">Valor em Estoque</span>
-              <span class="card-value" id="food-summary-stock-val">R$ 0,00</span>
+
+          <div class="dashboard-layout">
+            <!-- Left Column: Spending Chart & Recent Activities -->
+            <div>
+              <div class="glass-panel">
+                <h3 style="font-family: 'Montserrat', sans-serif; margin-bottom: 16px;">Histórico de Gastos Mensais</h3>
+                <div class="chart-container" id="foods-financial-chart">
+                  <!-- SVG Chart -->
+                </div>
+              </div>
+
+              <div class="glass-panel">
+                <h3 style="font-family: 'Montserrat', sans-serif; margin-bottom: 16px;">Consumos / Envios Recentes</h3>
+                <div class="table-container">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Data</th>
+                        <th>Item</th>
+                        <th>Quantidade</th>
+                        <th>Destinatário</th>
+                      </tr>
+                    </thead>
+                    <tbody id="food-dash-recent-body">
+                      <!-- JS injected -->
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </div>
-          </div>
-          <div class="glass-panel summary-card glass-panel-accent-cyan">
-            <div class="card-icon cyan">🍴</div>
-            <div class="card-info">
-              <span class="card-label">Total Consumido</span>
-              <span class="card-value" id="food-summary-consumption">R$ 0,00</span>
+
+            <!-- Right Column: Low Stock Alerts -->
+            <div>
+              <div class="glass-panel">
+                <h3 style="font-family: 'Montserrat', sans-serif; margin-bottom: 16px;">Alertas de Estoque</h3>
+                <div class="table-container">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Item</th>
+                        <th>Tipo</th>
+                        <th>Estoque</th>
+                        <th>Estado</th>
+                      </tr>
+                    </thead>
+                    <tbody id="food-dash-alerts-body">
+                      <!-- JS injected -->
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
-        <div class="columns-2">
-          <!-- Food Pantry Table -->
-          <div class="glass-panel">
-            <h3 style="font-family: 'Montserrat', sans-serif; margin-bottom: 16px;">1. Despensa (Ingredientes em Estoque)</h3>
-            <div class="table-container">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Alimento</th>
-                    <th>Estoque</th>
-                    <th>Alerta Mín</th>
-                    <th>Preço Médio</th>
-                    <th>Valor Estoque</th>
-                    <th>Última Compra</th>
-                    <th style="text-align: right;">Ações</th>
-                  </tr>
-                </thead>
-                <tbody id="food-ing-table-body">
-                  <!-- JS Injected -->
-                </tbody>
-              </table>
+        <!-- SUB-VIEW: INVENTORY -->
+        <div id="food-sub-inventory" class="sub-view-section">
+          <div class="columns-2">
+            <!-- Food Pantry Table -->
+            <div class="glass-panel">
+              <h3 style="font-family: 'Montserrat', sans-serif; margin-bottom: 16px;">1. Despensa (Ingredientes em Estoque)</h3>
+              <div class="table-container">
+                <table class="compact-table">
+                  <thead>
+                    <tr>
+                      <th>Alimento / Compra</th>
+                      <th>Estoque (Mín)</th>
+                      <th>Valor (Preço Médio)</th>
+                      <th style="text-align: right;">Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody id="food-ing-table-body">
+                    <!-- JS Injected -->
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
 
-          <!-- Meal Prep / Prepared Meals Table -->
-          <div class="glass-panel">
-            <h3 style="font-family: 'Montserrat', sans-serif; margin-bottom: 16px;">2. Pratos Preparados (Marmitas / Receitas Prontas)</h3>
-            <div class="table-container">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Refeição / Prato</th>
-                    <th>Estoque</th>
-                    <th>Custo Unit.</th>
-                    <th>Valor Estoque</th>
-                    <th>Último Preparo</th>
-                    <th style="text-align: right;">Ações</th>
-                  </tr>
-                </thead>
-                <tbody id="food-prod-table-body">
-                  <!-- JS Injected -->
-                </tbody>
-              </table>
+            <!-- Meal Prep / Prepared Meals Table -->
+            <div class="glass-panel">
+              <h3 style="font-family: 'Montserrat', sans-serif; margin-bottom: 16px;">2. Pratos Preparados (Misturas / Receitas Prontas)</h3>
+              <div class="table-container">
+                <table class="compact-table">
+                  <thead>
+                    <tr>
+                      <th>Prato / Preparo</th>
+                      <th>Estoque (Mín)</th>
+                      <th>Valor (Custo Unit.)</th>
+                      <th style="text-align: right;">Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody id="food-prod-table-body">
+                    <!-- JS Injected -->
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </div>
@@ -496,16 +535,23 @@
             <label for="supp-ing-name">Nome do Insumo</label>
             <input type="text" id="supp-ing-name" placeholder="Ex: Creatina Creapure, Beta-Alanina" required />
           </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label for="supp-ing-unit">Unidade de Medida</label>
-              <input type="text" id="supp-ing-unit" placeholder="Ex: g, cápsula, ml" required />
-            </div>
-            <div class="form-group">
-              <label for="supp-ing-min">Alerta de Estoque Mínimo</label>
-              <input type="number" step="0.1" id="supp-ing-min" placeholder="Ex: 100" required />
-            </div>
-          </div>
+             <div class="form-row">
+               <div class="form-group">
+                 <label for="supp-ing-subtype">Tipo de Insumo</label>
+                 <select id="supp-ing-subtype" required>
+                   <option value="ingrediente" selected>Matéria-Prima / Pó</option>
+                   <option value="capsula">Cápsula / Embalagem</option>
+                 </select>
+               </div>
+               <div class="form-group">
+                 <label for="supp-ing-unit">Unidade de Medida</label>
+                 <input type="text" id="supp-ing-unit" placeholder="Ex: g, cápsula, ml" required />
+               </div>
+             </div>
+             <div class="form-group">
+               <label for="supp-ing-min">Alerta de Estoque Mínimo</label>
+               <input type="number" step="0.1" id="supp-ing-min" placeholder="Ex: 100" required />
+             </div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary btn-close-modal">Cancelar</button>
@@ -538,13 +584,19 @@
               <input type="number" step="0.01" id="supp-pur-cost" placeholder="Ex: 120.00" required />
             </div>
           </div>
-          <div class="form-group">
-            <label for="supp-pur-date">Data da Compra</label>
-            <input type="date" id="supp-pur-date" required />
+          <div class="form-row">
+            <div class="form-group">
+              <label for="supp-pur-store">Fornecedor / Loja</label>
+              <input type="text" id="supp-pur-store" placeholder="Ex: Growth, OficialFarma" required />
+            </div>
+            <div class="form-group">
+              <label for="supp-pur-date">Data da Compra</label>
+              <input type="date" id="supp-pur-date" required />
+            </div>
           </div>
           <div class="form-group">
             <label for="supp-pur-notes">Observações</label>
-            <input type="text" id="supp-pur-notes" placeholder="Ex: Loja Growth, lote 24A" />
+            <input type="text" id="supp-pur-notes" placeholder="Ex: Lote 24A, frete grátis" />
           </div>
         </div>
         <div class="modal-footer">
@@ -568,10 +620,23 @@
             <label for="supp-rec-name">Nome do Suplemento Pronto</label>
             <input type="text" id="supp-rec-name" placeholder="Ex: Pré-Treino Focus, Blend Termogênico" required />
           </div>
-          <div class="form-group">
-            <label for="supp-rec-unit">Unidade do Produto Final</label>
-            <input type="text" id="supp-rec-unit" placeholder="Ex: dose, pote, cápsula" required />
-          </div>
+            <div class="form-group">
+              <label for="supp-rec-unit">Unidade do Produto Final</label>
+              <input type="text" id="supp-rec-unit" placeholder="Ex: dose, pote, cápsula" required />
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="supp-rec-capsule-select">Cápsula / Embalagem Utilizada</label>
+                <select id="supp-rec-capsule-select">
+                  <option value="">Nenhuma (Fórmula em pó/livre)</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="supp-rec-capsule-qty">Quantidade por Dose</label>
+                <input type="number" step="1" min="0" id="supp-rec-capsule-qty" placeholder="Ex: 2" value="0" />
+              </div>
+            </div>
           
           <div class="form-group">
             <label>Composição da Fórmula (por unidade/dose)</label>
@@ -720,13 +785,19 @@
               <input type="number" step="0.01" id="food-pur-cost" placeholder="Ex: 65.00" required />
             </div>
           </div>
-          <div class="form-group">
-            <label for="food-pur-date">Data da Compra</label>
-            <input type="date" id="food-pur-date" required />
+          <div class="form-row">
+            <div class="form-group">
+              <label for="food-pur-store">Fornecedor / Loja</label>
+              <input type="text" id="food-pur-store" placeholder="Ex: Feira de Domingo, Supermercado" required />
+            </div>
+            <div class="form-group">
+              <label for="food-pur-date">Data da Compra</label>
+              <input type="date" id="food-pur-date" required />
+            </div>
           </div>
           <div class="form-group">
             <label for="food-pur-notes">Observações</label>
-            <input type="text" id="food-pur-notes" placeholder="Ex: Feira de Domingo, Supermercado" />
+            <input type="text" id="food-pur-notes" placeholder="Ex: Lote extra, promoção" />
           </div>
         </div>
         <div class="modal-footer">
@@ -741,7 +812,7 @@
   <div id="modal-food-recipe" class="modal-overlay">
     <div class="modal-box">
       <div class="modal-header">
-        <h3>Criar Receita de Refeição (Marmita)</h3>
+        <h3>Criar Receita de Refeição (Mistura)</h3>
         <button class="modal-close">&times;</button>
       </div>
       <form id="food-recipe-form">
@@ -756,7 +827,7 @@
           </div>
           
           <div class="form-group">
-            <label>Ingredientes Usados (por porção/marmita)</label>
+            <label>Ingredientes Usados (por porção/mistura)</label>
             <div id="food-recipe-ingredients-builder" class="recipe-builder">
               <!-- Dynamically populated rows -->
             </div>
@@ -786,7 +857,7 @@
           </div>
           <div class="form-group">
             <label for="food-prod-qty">Quantidade Preparada (Rendimento)</label>
-            <input type="number" step="0.01" id="food-prod-qty" placeholder="Ex: 8 (marmitas)" required />
+            <input type="number" step="0.01" id="food-prod-qty" placeholder="Ex: 8 (misturas)" required />
           </div>
           <div class="form-group">
             <label for="food-prod-date">Data de Preparo</label>
@@ -818,7 +889,7 @@
             <div class="form-group">
               <label for="food-use-type-select">Tipo de Operação</label>
               <select id="food-use-type-select" required>
-                <option value="product">Refeição Pronta (Marmita)</option>
+                <option value="product">Refeição Pronta (Mistura)</option>
                 <option value="ingredient">Alimento Cru (Ingrediente Avulso)</option>
               </select>
             </div>
@@ -896,7 +967,207 @@
     </div>
   </div>
 
+  <!-- ============================================== -->
+  <!-- MODAL: PRICE COMPARATOR & QUOTES -->
+  <!-- ============================================== -->
+  <div id="modal-compare-prices" class="modal-overlay">
+    <div class="modal-box" style="max-width: 700px;">
+      <div class="modal-header">
+        <h3>Comparador de Preços: <span id="compare-ing-name">Insumo</span></h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+        
+        <!-- 1. Form to add a new quote -->
+        <h4 style="margin-bottom: 12px; color: var(--accent-purple); display: flex; align-items: center; gap: 8px;">
+          <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+          Adicionar Nova Cotação Pesquisada
+        </h4>
+        <form id="compare-add-quote-form" style="background: rgba(255,255,255,0.02); padding: 16px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 24px;">
+          <input type="hidden" id="compare-ing-id" />
+          <input type="hidden" id="compare-ing-category" />
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label for="compare-quote-store">Loja / Fornecedor / Website</label>
+              <input type="text" id="compare-quote-store" placeholder="Ex: Growth, OficialFarma, Mercado Livre" required />
+            </div>
+            <div class="form-group">
+              <label for="compare-quote-qty">Quantidade do Insumo (<span class="compare-ing-unit-label">unit</span>)</label>
+              <input type="number" step="0.01" id="compare-quote-qty" placeholder="Ex: 500" required />
+            </div>
+          </div>
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label for="compare-quote-cost">Preço Total Cobrado (R$)</label>
+              <input type="number" step="0.01" id="compare-quote-cost" placeholder="Ex: 90.00" required />
+            </div>
+            <div class="form-group">
+              <label for="compare-quote-date">Data da Pesquisa</label>
+              <input type="date" id="compare-quote-date" required />
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label for="compare-quote-notes">Observações de Compra (Cupom, Frete, etc.)</label>
+            <input type="text" id="compare-quote-notes" placeholder="Ex: Frete de R$ 15, cupom DESCONTO5" />
+          </div>
+          
+          <div style="text-align: right; margin-top: 10px;">
+            <button type="submit" class="btn btn-purple btn-sm">Salvar Cotação</button>
+          </div>
+        </form>
+
+        <!-- 2. Table of research quotes -->
+        <h4 style="margin-bottom: 12px; color: var(--accent-cyan); display: flex; align-items: center; gap: 8px;">
+          <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+          Cotações Pesquisadas
+        </h4>
+        <div class="table-container" style="margin-bottom: 24px; max-height: 200px; overflow-y: auto;">
+          <table class="compact-table">
+            <thead>
+              <tr>
+                <th>Loja / Fornecedor</th>
+                <th>Qtd/Valor</th>
+                <th>Custo Unit.</th>
+                <th>Obs.</th>
+                <th style="text-align: right;">Ações</th>
+              </tr>
+            </thead>
+            <tbody id="compare-quotes-table-body">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- 3. Table of actual purchase history -->
+        <h4 style="margin-bottom: 12px; color: var(--accent-green); display: flex; align-items: center; gap: 8px;">
+          <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+          Histórico de Compras Reais Efetuadas
+        </h4>
+        <div class="table-container" style="max-height: 200px; overflow-y: auto;">
+          <table class="compact-table">
+            <thead>
+              <tr>
+                <th>Data</th>
+                <th>Loja / Fornecedor</th>
+                <th>Quantidade</th>
+                <th>Valor Total</th>
+                <th>Custo Unit.</th>
+              </tr>
+            </thead>
+            <tbody id="compare-purchases-table-body">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary btn-close-modal">Fechar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. Import Food Purchase via QR Code / NFC-e -->
+  <div id="modal-food-nfc-import" class="modal-overlay">
+    <div class="modal-box" style="max-width: 800px;">
+      <div class="modal-header">
+        <h3>Importar Nota Fiscal por QR Code</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <form id="food-nfc-import-form">
+        <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="food-nfc-store">Fornecedor / Loja</label>
+              <input type="text" id="food-nfc-store" placeholder="Ex: Supermercado Pão de Açúcar, Zona Sul" required />
+            </div>
+            <div class="form-group">
+              <label for="food-nfc-date">Data da Compra</label>
+              <input type="date" id="food-nfc-date" required />
+            </div>
+          </div>
+          
+          <!-- Drag & Drop Zone for QR Code image -->
+          <div class="form-group">
+            <label>Scanear QR Code da Nota Fiscal</label>
+            <div id="food-nfc-dropzone" style="border: 2px dashed rgba(255,255,255,0.15); border-radius: 8px; padding: 24px; text-align: center; background: rgba(255,255,255,0.02); cursor: pointer; transition: all 0.2s ease;">
+              <div style="font-size: 2rem; margin-bottom: 8px;">📷</div>
+              <p style="margin: 0; font-size: 0.9rem; color: var(--text-muted);">
+                Arraste a imagem do QR Code aqui ou <span style="color: var(--accent-cyan); text-decoration: underline;">clique para fazer upload</span>
+              </p>
+              <input type="file" id="food-nfc-file-input" accept="image/*" style="display: none;" />
+              <div id="food-nfc-scan-status" style="margin-top: 10px; font-weight: 500; font-size: 0.85rem;"></div>
+            </div>
+            
+            <!-- Camera Scanner Controls -->
+            <div style="margin-top: 12px; text-align: center;">
+              <button type="button" id="btn-food-nfc-camera-start" class="btn btn-secondary btn-sm" style="border: 1px solid rgba(0, 240, 255, 0.4); color: #00f0ff;">
+                🎥 Scanear com a Câmera
+              </button>
+              <button type="button" id="btn-food-nfc-camera-stop" class="btn btn-danger btn-sm" style="display: none;">
+                ⏹️ Parar Câmera
+              </button>
+            </div>
+            
+            <!-- Video preview element -->
+            <div id="food-nfc-video-container" style="display: none; text-align: center; margin-top: 12px; position: relative; overflow: hidden; border-radius: 8px;">
+              <video id="food-nfc-video" autoplay playsinline style="width: 100%; max-width: 360px; height: 270px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.1); background: #000; object-fit: cover;"></video>
+              <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); border: 2px dashed var(--accent-cyan); width: 180px; height: 180px; border-radius: 12px; pointer-events: none; box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5); box-sizing: border-box;"></div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="food-nfc-url">Ou Cole o Link do QR Code (URL da NFC-e)</label>
+            <div style="display: flex; gap: 10px;">
+              <input type="url" id="food-nfc-url" placeholder="https://www.sefaz.rs.gov.br/NFCE/NFCE-COM.aspx..." style="flex-grow: 1;" />
+              <button type="button" id="btn-food-nfc-load-url" class="btn btn-secondary" style="height: 44px; white-space: nowrap;">Carregar Link</button>
+            </div>
+          </div>
+
+          <div style="text-align: center; margin-bottom: 20px;">
+            <span style="opacity: 0.5; font-size: 0.85rem; margin: 0 10px;">ou</span>
+            <button type="button" id="btn-food-nfc-simulate" class="btn btn-secondary btn-sm" style="border: 1px solid rgba(157, 78, 221, 0.4); color: #c8b6ff;">Carregar Nota de Teste (Simulação)</button>
+          </div>
+
+          <!-- Mapped items preview -->
+          <div id="food-nfc-items-section" style="display: none;">
+            <h4 style="margin-bottom: 12px; color: var(--accent-cyan); display: flex; align-items: center; gap: 8px;">
+              <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+              Itens Encontrados na Nota
+            </h4>
+            <div class="table-container" style="margin-bottom: 16px;">
+              <table class="compact-table">
+                <thead>
+                  <tr>
+                    <th>Item na Nota</th>
+                    <th>Qtd / Total</th>
+                    <th>Preço Unit.</th>
+                    <th>Vincular ao Insumo no App</th>
+                  </tr>
+                </thead>
+                <tbody id="food-nfc-items-table-body">
+                  <!-- Dynamically populated -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-close-modal">Cancelar</button>
+          <button type="submit" id="btn-food-nfc-submit" class="btn btn-purple" style="display: none;">Confirmar Importação</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- External Library for QR Code Decoding inside browser -->
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+
   <!-- Load Application Controller -->
-  <script type="module" src="js/app.js"></script>
+  <script type="module" src="js/app.js?v=1.0.9"></script>
 </body>
 </html>

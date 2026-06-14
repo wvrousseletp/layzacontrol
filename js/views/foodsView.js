@@ -1,11 +1,49 @@
 import { store } from '../store.js';
+import { renderLineChart } from '../charts.js';
 
 export const foodsView = {
   category: 'foods',
 
   init() {
+    this.cameraStream = null;
+    this.isScanningCamera = false;
     this.registerEventListeners();
     this.render();
+
+    // MutationObserver to stop camera if the import modal is closed
+    const nfcModal = document.getElementById('modal-food-nfc-import');
+    if (nfcModal) {
+      const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+          if (mutation.attributeName === 'class') {
+            const isActive = nfcModal.classList.contains('active');
+            if (!isActive) {
+              this.stopCameraScan();
+            }
+          }
+        });
+      });
+      observer.observe(nfcModal, { attributes: true });
+    }
+
+    // Stop camera if user switches tabs via main navigation
+    document.querySelectorAll('.nav-item button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        this.stopCameraScan();
+      });
+    });
+
+    // Stop camera if visibility changes (e.g. app goes to background / tab switch)
+    window.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        this.stopCameraScan();
+      }
+    });
+
+    // Stop camera on page unload/refresh
+    window.addEventListener('beforeunload', () => {
+      this.stopCameraScan();
+    });
 
     window.addEventListener('storeUpdated', () => {
       if (document.getElementById('view-foods').classList.contains('active')) {
@@ -44,10 +82,11 @@ export const foodsView = {
         const quantity = document.getElementById('food-pur-qty').value;
         const totalCost = document.getElementById('food-pur-cost').value;
         const date = document.getElementById('food-pur-date').value;
+        const storeName = document.getElementById('food-pur-store').value;
         const notes = document.getElementById('food-pur-notes').value;
 
         try {
-          store.recordPurchase(this.category, { ingredientId, quantity, totalCost, date, notes });
+          store.recordPurchase(this.category, { ingredientId, quantity, totalCost, date, store: storeName, notes });
           purchaseForm.reset();
           this.closeModal('modal-food-purchase');
           window.dispatchEvent(new Event('storeUpdated'));
@@ -170,6 +209,7 @@ export const foodsView = {
     
     document.getElementById('btn-food-purchase').addEventListener('click', () => {
       this.populateIngredientSelect('food-pur-ing-select');
+      document.getElementById('food-pur-store').value = '';
       document.getElementById('food-pur-date').value = new Date().toISOString().split('T')[0];
       this.openModal('modal-food-purchase');
     });
@@ -194,6 +234,18 @@ export const foodsView = {
       document.getElementById('food-use-date').value = new Date().toISOString().split('T')[0];
       this.openModal('modal-food-usage');
     });
+
+    document.getElementById('btn-food-nfc-import').addEventListener('click', () => {
+      document.getElementById('food-nfc-store').value = '';
+      document.getElementById('food-nfc-date').value = new Date().toISOString().split('T')[0];
+      document.getElementById('food-nfc-url').value = '';
+      document.getElementById('food-nfc-scan-status').innerHTML = '';
+      document.getElementById('food-nfc-items-section').style.display = 'none';
+      document.getElementById('btn-food-nfc-submit').style.display = 'none';
+      this.openModal('modal-food-nfc-import');
+    });
+
+    this.registerNFCImportListeners();
   },
 
   // Modal actions
@@ -211,7 +263,7 @@ export const foodsView = {
     if (!select) return;
 
     const people = store.getPeople();
-    select.innerHTML = people.map(p => `
+    select.innerHTML = '<option value="">Consumo Próprio (Padrão)</option>' + people.map(p => `
       <option value="${p.id}">${p.name}</option>
     `).join('');
   },
@@ -325,6 +377,12 @@ export const foodsView = {
     document.getElementById('food-summary-stock-val').innerText = `R$ ${financial.totalInventoryValue.toFixed(2)}`;
     document.getElementById('food-summary-consumption').innerText = `R$ ${financial.totalUsageCost.toFixed(2)}`;
 
+    // Render sub-dashboard widgets if active
+    const subDash = document.getElementById('food-sub-dashboard');
+    if (subDash && subDash.classList.contains('active')) {
+      this.renderChartsAndAlerts();
+    }
+
     // 1. Render Ingredients (Alimentos Crus) Table
     const ingTableBody = document.getElementById('food-ing-table-body');
     if (ingTableBody) {
@@ -346,18 +404,22 @@ export const foodsView = {
 
           return `
             <tr>
-              <td><strong>${i.name}</strong></td>
-              <td>${i.currentStock.toFixed(1)} ${i.unit}</td>
-              <td>${i.minStock.toFixed(1)} ${i.unit}</td>
-              <td>R$ ${i.averageCost.toFixed(2)} / ${i.unit}</td>
+              <td>
+                <strong>${i.name}</strong>
+                <div class="table-sub-text">Última Compra: ${lastPurchaseDate}</div>
+              </td>
               <td>
                 <span class="stock-indicator">
                   <span class="stock-dot ${statusClass}"></span>
-                  <span>R$ ${(i.currentStock * i.averageCost).toFixed(2)}</span>
-                </div>
+                  <span>${i.currentStock.toFixed(1)} ${i.unit} <span style="opacity: 0.5; font-size: 0.75rem;">(Mín: ${i.minStock.toFixed(1)})</span></span>
+                </span>
               </td>
-              <td>${lastPurchaseDate}</td>
-              <td style="text-align: right;">
+              <td>
+                <strong>R$ ${(i.currentStock * i.averageCost).toFixed(2)}</strong>
+                <div class="table-sub-text">Preço Médio: R$ ${i.averageCost.toFixed(2)}</div>
+              </td>
+              <td style="text-align: right; white-space: nowrap;">
+                <button class="btn btn-purple btn-sm compare-ing-btn" data-id="${i.id}">Comparar</button>
                 <button class="btn btn-secondary btn-sm edit-ing-btn" data-id="${i.id}">Editar</button>
                 <button class="btn btn-danger btn-sm delete-ing-btn" data-id="${i.id}">Excluir</button>
               </td>
@@ -387,10 +449,17 @@ export const foodsView = {
             window.openEditIngredientModal(this.category, id);
           });
         });
+
+        ingTableBody.querySelectorAll('.compare-ing-btn').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            const id = btn.getAttribute('data-id');
+            window.openComparePricesModal(this.category, id);
+          });
+        });
       }
     }
 
-    // 2. Render Recipes & Finished Products (Refeições Prontas / Marmitas)
+    // 2. Render Recipes & Finished Products (Refeições Prontas / Misturas)
     const prodTableBody = document.getElementById('food-prod-table-body');
     if (prodTableBody) {
       if (products.length === 0) {
@@ -419,21 +488,23 @@ export const foodsView = {
             <tr>
               <td>
                 <strong>${p.name}</strong>
-                <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px; max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                <div class="table-sub-text" style="max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                   Receita: ${recipeIngredientsText}
                 </div>
+                <div class="table-sub-text">Último Preparo: ${lastProdDate}</div>
               </td>
-              <td>${p.currentStock.toFixed(1)} ${p.unit}</td>
-              <td>R$ ${p.averageCost.toFixed(2)}</td>
               <td>
                 <span class="stock-indicator">
                   <span class="stock-dot ${statusClass}"></span>
-                  <span>R$ ${(p.currentStock * p.averageCost).toFixed(2)}</span>
-                </div>
+                  <span>${p.currentStock.toFixed(1)} ${p.unit} <span style="opacity: 0.5; font-size: 0.75rem;">(Mín: ${p.minStock.toFixed(1)})</span></span>
+                </span>
               </td>
-              <td>${lastProdDate}</td>
-              <td style="text-align: right;">
-                <button class="btn btn-secondary btn-sm edit-prod-min-btn" data-id="${p.id}">Definir Alerta</button>
+              <td>
+                <strong>R$ ${(p.currentStock * p.averageCost).toFixed(2)}</strong>
+                <div class="table-sub-text">Custo Unit: R$ ${p.averageCost.toFixed(2)}</div>
+              </td>
+              <td style="text-align: right; white-space: nowrap;">
+                <button class="btn btn-secondary btn-sm edit-prod-min-btn" data-id="${p.id}">Alerta</button>
                 <button class="btn btn-danger btn-sm delete-recipe-btn" data-id="${p.recipeId}">Excluir</button>
               </td>
             </tr>
@@ -475,6 +546,479 @@ export const foodsView = {
           });
         });
       }
+    }
+  },
+
+  renderChartsAndAlerts() {
+    const txs = store.getTransactions(this.category);
+    
+    // 1. Group expenses by month (last 6 months)
+    const monthlyData = {};
+    const monthNames = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+    const monthsKeys = [];
+    const labels = [];
+    
+    const now = new Date();
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      monthsKeys.push(key);
+      labels.push(`${monthNames[d.getMonth()]} / ${String(d.getFullYear()).slice(-2)}`);
+      monthlyData[key] = 0;
+    }
+
+    txs.forEach(t => {
+      if (t.type === 'purchase') {
+        const monthKey = t.date.substring(0, 7); // YYYY-MM
+        if (monthlyData[monthKey] !== undefined) {
+          monthlyData[monthKey] += t.totalCost;
+        }
+      }
+    });
+
+    const dataPoints = monthsKeys.map(key => monthlyData[key]);
+    renderLineChart('foods-financial-chart', dataPoints, labels, '#00f59b', 'Gastos Alimentos');
+
+    // 2. Render Low Stock Alerts for foods
+    const alertsBody = document.getElementById('food-dash-alerts-body');
+    if (alertsBody) {
+      const alerts = store.getLowStockItems(this.category);
+      if (alerts.length === 0) {
+        alertsBody.innerHTML = `
+          <tr>
+            <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 12px;">
+              🎉 Tudo em ordem!
+            </td>
+          </tr>
+        `;
+      } else {
+        alertsBody.innerHTML = alerts.slice(0, 5).map(a => {
+          const statusClass = a.current === 0 ? 'stock-critical' : 'stock-low';
+          return `
+            <tr>
+              <td><strong>${a.name}</strong></td>
+              <td>${a.type}</td>
+              <td>
+                <div class="stock-indicator">
+                  <span class="stock-dot ${statusClass}"></span>
+                  <span>${a.current.toFixed(1)} ${a.unit}</span>
+                </div>
+              </td>
+              <td><span class="badge ${a.current === 0 ? 'badge-danger' : 'badge-warn'}">${a.current === 0 ? 'Zerado' : 'Baixo'}</span></td>
+            </tr>
+          `;
+        }).join('');
+      }
+    }
+
+    // 3. Render Recent Usages/Shipments for foods
+    const recentBody = document.getElementById('food-dash-recent-body');
+    if (recentBody) {
+      const usages = txs.filter(t => t.type === 'usage').slice(0, 5);
+      if (usages.length === 0) {
+        recentBody.innerHTML = `
+          <tr>
+            <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 12px;">
+              Nenhum consumo recente.
+            </td>
+          </tr>
+        `;
+      } else {
+        recentBody.innerHTML = usages.map(u => {
+          const dateStr = u.date.split('-').reverse().join('/');
+          const recipientStr = u.recipientName || 'Consumo Próprio';
+          return `
+            <tr>
+              <td>${dateStr}</td>
+              <td><strong>${u.itemName}</strong></td>
+              <td>${u.quantity} ${u.unit}</td>
+              <td><span style="color: var(--accent-cyan); font-weight: 500;">${recipientStr}</span></td>
+            </tr>
+          `;
+        }).join('');
+      }
+    }
+  },
+
+  registerNFCImportListeners() {
+    const dropzone = document.getElementById('food-nfc-dropzone');
+    const fileInput = document.getElementById('food-nfc-file-input');
+    const statusDiv = document.getElementById('food-nfc-scan-status');
+
+    if (!dropzone || !fileInput) return;
+
+    // Trigger file input click
+    dropzone.addEventListener('click', () => fileInput.click());
+
+    // Drag and drop styles
+    dropzone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropzone.style.borderColor = 'var(--accent-cyan)';
+      dropzone.style.background = 'rgba(0, 240, 255, 0.05)';
+    });
+
+    dropzone.addEventListener('dragleave', () => {
+      dropzone.style.borderColor = 'rgba(255, 255, 255, 0.15)';
+      dropzone.style.background = 'rgba(255, 255, 255, 0.02)';
+    });
+
+    dropzone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropzone.style.borderColor = 'rgba(255, 255, 255, 0.15)';
+      dropzone.style.background = 'rgba(255, 255, 255, 0.02)';
+      
+      const files = e.dataTransfer.files;
+      if (files.length > 0) {
+        this.decodeQRCodeFromImage(files[0]);
+      }
+    });
+
+    // File input change
+    fileInput.addEventListener('change', (e) => {
+      const files = e.target.files;
+      if (files.length > 0) {
+        this.decodeQRCodeFromImage(files[0]);
+      }
+    });
+
+    // Camera buttons
+    const startCameraBtn = document.getElementById('btn-food-nfc-camera-start');
+    if (startCameraBtn) {
+      startCameraBtn.addEventListener('click', () => {
+        this.startCameraScan();
+      });
+    }
+
+    const stopCameraBtn = document.getElementById('btn-food-nfc-camera-stop');
+    if (stopCameraBtn) {
+      stopCameraBtn.addEventListener('click', () => {
+        this.stopCameraScan();
+      });
+    }
+
+    // Load URL button click
+    const loadUrlBtn = document.getElementById('btn-food-nfc-load-url');
+    if (loadUrlBtn) {
+      loadUrlBtn.addEventListener('click', () => {
+        const url = document.getElementById('food-nfc-url').value;
+        if (!url || !url.trim()) {
+          alert("Por favor, cole um link de QR Code válido.");
+          return;
+        }
+        this.processNFCeURL(url);
+      });
+    }
+
+    // Simulate button click
+    const simulateBtn = document.getElementById('btn-food-nfc-simulate');
+    if (simulateBtn) {
+      simulateBtn.addEventListener('click', () => {
+        document.getElementById('food-nfc-url').value = "https://www.sefaz.rs.gov.br/NFCE/NFCE-COM.aspx?chNFe=43260690055373002345650010001234561008765432";
+        document.getElementById('food-nfc-store').value = "Supermercado Layza Simulação";
+        this.processNFCeURL("https://www.sefaz.rs.gov.br/NFCE/NFCE-COM.aspx?chNFe=43260690055373002345650010001234561008765432");
+      });
+    }
+
+    // Form submit import confirm
+    const importForm = document.getElementById('food-nfc-import-form');
+    if (importForm) {
+      importForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const storeName = document.getElementById('food-nfc-store').value;
+        const purchaseDate = document.getElementById('food-nfc-date').value;
+
+        if (!storeName || !purchaseDate) {
+          alert("Por favor, preencha o fornecedor e a data.");
+          return;
+        }
+
+        const rows = document.querySelectorAll('.food-nfc-item-row');
+        if (rows.length === 0) return;
+
+        try {
+          rows.forEach(row => {
+            const select = row.querySelector('.food-nfc-mapping-select');
+            const originalName = row.getAttribute('data-name');
+            const unit = row.getAttribute('data-unit');
+            const quantity = parseFloat(row.getAttribute('data-qty'));
+            const totalCost = parseFloat(row.getAttribute('data-cost'));
+            const selection = select.value;
+
+            let ingredientId;
+            if (selection === '_new') {
+              // Create new ingredient
+              const newIng = store.addIngredient(this.category, {
+                name: originalName,
+                unit: unit,
+                minStock: 0
+              });
+              ingredientId = newIng.id;
+            } else {
+              ingredientId = selection;
+            }
+
+            // Record purchase
+            store.recordPurchase(this.category, {
+              ingredientId,
+              quantity,
+              totalCost,
+              date: purchaseDate,
+              store: storeName,
+              notes: 'Importado via Nota Fiscal'
+            });
+          });
+
+          importForm.reset();
+          this.closeModal('modal-food-nfc-import');
+          window.dispatchEvent(new Event('storeUpdated'));
+          alert("Importação da Nota Fiscal efetuada com sucesso!");
+        } catch (err) {
+          alert("Erro na importação: " + err.message);
+        }
+      });
+    }
+  },
+
+  decodeQRCodeFromImage(file) {
+    const statusDiv = document.getElementById('food-nfc-scan-status');
+    if (!statusDiv) return;
+
+    statusDiv.style.color = 'var(--text-muted)';
+    statusDiv.textContent = "Processando imagem do QR Code...";
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        // Create canvas to draw the image and extract ImageData
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        context.drawImage(img, 0, 0, img.width, img.height);
+        
+        try {
+          const imageData = context.getImageData(0, 0, img.width, img.height);
+          // Run jsQR
+          if (typeof jsQR === 'undefined') {
+            statusDiv.style.color = 'var(--color-danger)';
+            statusDiv.textContent = "Biblioteca jsQR não foi carregada. Verifique sua conexão com a internet.";
+            return;
+          }
+
+          const code = jsQR(imageData.data, imageData.width, imageData.height, {
+            inversionAttempts: "dontInvert",
+          });
+
+          if (code) {
+            statusDiv.style.color = 'var(--accent-green)';
+            statusDiv.textContent = "QR Code decodificado com sucesso!";
+            document.getElementById('food-nfc-url').value = code.data;
+            this.processNFCeURL(code.data);
+          } else {
+            statusDiv.style.color = 'var(--accent-orange)';
+            statusDiv.textContent = "Não foi possível encontrar um QR Code legível na imagem.";
+          }
+        } catch (err) {
+          statusDiv.style.color = 'var(--color-danger)';
+          statusDiv.textContent = "Erro ao processar os dados da imagem: " + err.message;
+        }
+      };
+      img.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
+  },
+
+  processNFCeURL(url) {
+    const statusDiv = document.getElementById('food-nfc-scan-status');
+    if (statusDiv) {
+      statusDiv.style.color = 'var(--accent-green)';
+      statusDiv.textContent = "Nota identificada. Simulando processamento local de itens...";
+    }
+
+    // Realistic mock grocery items for demonstration since SEFAZ pages reject direct browser scrape (CORS)
+    const mockItems = [
+      { name: "Peito de Frango Sadia 1kg", quantity: 1, totalCost: 22.90, unit: "kg" },
+      { name: "Ovos Brancos Mantiqueira c/30", quantity: 1, totalCost: 18.50, unit: "un" },
+      { name: "Arroz Integral Camil 1kg", quantity: 2, totalCost: 15.80, unit: "kg" },
+      { name: "Batata Doce kg", quantity: 2.5, totalCost: 12.50, unit: "kg" }
+    ];
+
+    // Populate interface tables
+    this.renderNFCItemsTable(mockItems);
+  },
+
+  renderNFCItemsTable(items) {
+    const tableBody = document.getElementById('food-nfc-items-table-body');
+    if (!tableBody) return;
+
+    const existingIngredients = store.getIngredients(this.category);
+
+    tableBody.innerHTML = items.map((item, idx) => {
+      // Name match check
+      let matchedId = "_new";
+      let bestScore = 0;
+      existingIngredients.forEach(ing => {
+        const ingNameLower = ing.name.toLowerCase();
+        const itemNameLower = item.name.toLowerCase();
+        // Check partial or exact containment
+        if (itemNameLower.includes(ingNameLower) || ingNameLower.includes(itemNameLower)) {
+          const score = Math.min(ingNameLower.length, itemNameLower.length) / Math.max(ingNameLower.length, itemNameLower.length);
+          if (score > bestScore) {
+            bestScore = score;
+            matchedId = ing.id;
+          }
+        }
+      });
+
+      const options = [
+        `<option value="_new" ${matchedId === '_new' ? 'selected' : ''}>+ Cadastrar como Novo: "${item.name}"</option>`
+      ];
+      existingIngredients.forEach(ing => {
+        options.push(`<option value="${ing.id}" ${ing.id === matchedId ? 'selected' : ''}>Mapear para: ${ing.name} (${ing.unit})</option>`);
+      });
+
+      const hasMatch = matchedId !== "_new";
+      const warningText = hasMatch ? '' : ' <span class="badge badge-warn" style="font-size: 0.65rem; padding: 2px 4px; text-transform:none; vertical-align:middle; margin-left: 5px;">⚠️ Não cadastrado</span>';
+
+      return `
+        <tr class="food-nfc-item-row" data-name="${item.name}" data-qty="${item.quantity}" data-cost="${item.totalCost}" data-unit="${item.unit}">
+          <td><strong>${item.name}</strong>${warningText}</td>
+          <td>${item.quantity} ${item.unit} por R$ ${item.totalCost.toFixed(2)}</td>
+          <td>R$ ${(item.totalCost / item.quantity).toFixed(2)} / ${item.unit}</td>
+          <td>
+            <select class="food-nfc-mapping-select" style="padding: 6px; border-radius: 4px; background: rgba(255,255,255,0.05); color: var(--text-color); border: 1px solid rgba(255,255,255,0.1); width: 100%;">
+              ${options.join('')}
+            </select>
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    document.getElementById('food-nfc-items-section').style.display = 'block';
+    document.getElementById('btn-food-nfc-submit').style.display = 'inline-block';
+  },
+
+  startCameraScan() {
+    const statusDiv = document.getElementById('food-nfc-scan-status');
+    const videoContainer = document.getElementById('food-nfc-video-container');
+    const startCameraBtn = document.getElementById('btn-food-nfc-camera-start');
+    const stopCameraBtn = document.getElementById('btn-food-nfc-camera-stop');
+    const video = document.getElementById('food-nfc-video');
+
+    if (!video || !videoContainer) return;
+
+    this.isScanningCamera = true;
+    videoContainer.style.display = 'block';
+    if (stopCameraBtn) stopCameraBtn.style.display = 'inline-block';
+    if (startCameraBtn) startCameraBtn.style.display = 'none';
+
+    if (statusDiv) {
+      statusDiv.style.color = 'var(--text-muted)';
+      statusDiv.textContent = "Iniciando câmera...";
+    }
+
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+      .then(stream => {
+        this.cameraStream = stream;
+        video.srcObject = stream;
+        video.setAttribute("playsinline", true); // iOS Safari support
+        video.play();
+        if (statusDiv) {
+          statusDiv.style.color = 'var(--accent-cyan)';
+          statusDiv.textContent = "Câmera ativa. Aponte para o QR Code da nota fiscal.";
+        }
+        requestAnimationFrame(() => this.tickCameraScan());
+      })
+      .catch(err => {
+        console.error("Error accessing camera: ", err);
+        this.stopCameraScan();
+        if (statusDiv) {
+          statusDiv.style.color = 'var(--color-danger)';
+          statusDiv.textContent = "Erro ao acessar a câmera: " + (err.message || err);
+        }
+      });
+  },
+
+  stopCameraScan() {
+    this.isScanningCamera = false;
+
+    if (this.cameraStream) {
+      this.cameraStream.getTracks().forEach(track => {
+        try {
+          track.stop();
+        } catch (e) {
+          console.error("Error stopping track: ", e);
+        }
+      });
+      this.cameraStream = null;
+    }
+
+    const video = document.getElementById('food-nfc-video');
+    if (video) {
+      video.srcObject = null;
+    }
+
+    const videoContainer = document.getElementById('food-nfc-video-container');
+    if (videoContainer) videoContainer.style.display = 'none';
+
+    const startCameraBtn = document.getElementById('btn-food-nfc-camera-start');
+    if (startCameraBtn) startCameraBtn.style.display = 'inline-block';
+
+    const stopCameraBtn = document.getElementById('btn-food-nfc-camera-stop');
+    if (stopCameraBtn) stopCameraBtn.style.display = 'none';
+  },
+
+  tickCameraScan() {
+    if (!this.isScanningCamera || !this.cameraStream) return;
+
+    const video = document.getElementById('food-nfc-video');
+    const statusDiv = document.getElementById('food-nfc-scan-status');
+
+    if (!video) return;
+
+    if (video.readyState === video.HAVE_ENOUGH_DATA) {
+      if (!this.scanCanvas) {
+        this.scanCanvas = document.createElement('canvas');
+      }
+      const canvas = this.scanCanvas;
+      const context = canvas.getContext('2d');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      try {
+        const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+        if (typeof jsQR === 'undefined') {
+          if (statusDiv) {
+            statusDiv.style.color = 'var(--color-danger)';
+            statusDiv.textContent = "Biblioteca jsQR não encontrada.";
+          }
+          this.stopCameraScan();
+          return;
+        }
+
+        const code = jsQR(imageData.data, imageData.width, imageData.height, {
+          inversionAttempts: "dontInvert",
+        });
+
+        if (code) {
+          if (statusDiv) {
+            statusDiv.style.color = 'var(--accent-green)';
+            statusDiv.textContent = "QR Code decodificado com sucesso!";
+          }
+          document.getElementById('food-nfc-url').value = code.data;
+          this.processNFCeURL(code.data);
+          this.stopCameraScan();
+          return; // Stop scanning loop
+        }
+      } catch (err) {
+        console.error("Error decoding in tickCameraScan: ", err);
+      }
+    }
+
+    if (this.isScanningCamera) {
+      requestAnimationFrame(() => this.tickCameraScan());
     }
   }
 };

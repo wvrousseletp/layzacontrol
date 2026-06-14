@@ -95,7 +95,7 @@ export const historyView = {
       const formattedValue = t.type === 'usage' ? `- R$ ${t.totalCost.toFixed(2)}` : `R$ ${t.totalCost.toFixed(2)}`;
       const valueStyle = t.type === 'usage' ? 'color: var(--accent-cyan);' : 'font-weight: 600;';
 
-      const recipientText = t.recipient ? `<div style="font-size: 0.8rem; color: var(--accent-cyan); margin-top: 4px; font-weight: 500;">Enviado para: ${t.recipient}</div>` : '';
+      const recipientText = t.recipientName ? `<div style="font-size: 0.8rem; color: var(--accent-cyan); margin-top: 4px; font-weight: 500;">Enviado para: ${t.recipientName}</div>` : '';
 
       return `
         <tr>

@@ -1,4 +1,5 @@
 import { store } from '../store.js';
+import { renderLineChart } from '../charts.js';
 
 export const supplementsView = {
   category: 'supplements',
@@ -23,9 +24,10 @@ export const supplementsView = {
         const name = document.getElementById('supp-ing-name').value;
         const unit = document.getElementById('supp-ing-unit').value;
         const minStock = document.getElementById('supp-ing-min').value;
+        const subType = document.getElementById('supp-ing-subtype').value;
 
         try {
-          store.addIngredient(this.category, { name, unit, minStock });
+          store.addIngredient(this.category, { name, unit, minStock, subType });
           addIngForm.reset();
           this.closeModal('modal-supp-add-ing');
           window.dispatchEvent(new Event('storeUpdated'));
@@ -44,10 +46,11 @@ export const supplementsView = {
         const quantity = document.getElementById('supp-pur-qty').value;
         const totalCost = document.getElementById('supp-pur-cost').value;
         const date = document.getElementById('supp-pur-date').value;
+        const storeName = document.getElementById('supp-pur-store').value;
         const notes = document.getElementById('supp-pur-notes').value;
 
         try {
-          store.recordPurchase(this.category, { ingredientId, quantity, totalCost, date, notes });
+          store.recordPurchase(this.category, { ingredientId, quantity, totalCost, date, store: storeName, notes });
           purchaseForm.reset();
           this.closeModal('modal-supp-purchase');
           window.dispatchEvent(new Event('storeUpdated'));
@@ -72,6 +75,8 @@ export const supplementsView = {
         e.preventDefault();
         const name = document.getElementById('supp-rec-name').value;
         const unit = document.getElementById('supp-rec-unit').value;
+        const capsuleId = document.getElementById('supp-rec-capsule-select').value;
+        const capsuleQty = parseFloat(document.getElementById('supp-rec-capsule-qty').value) || 0;
         
         // Collect recipe ingredients
         const ingRows = document.querySelectorAll('.supp-recipe-ing-row');
@@ -94,8 +99,13 @@ export const supplementsView = {
           return;
         }
 
+        if (capsuleId && capsuleQty <= 0) {
+          alert("Por favor, insira uma quantidade válida de cápsulas por dose.");
+          return;
+        }
+
         try {
-          store.addRecipe(this.category, { name, unit, ingredients });
+          store.addRecipe(this.category, { name, unit, ingredients, capsuleId, capsuleQty });
           recipeForm.reset();
           // Reset ingredient rows in builder to only one row
           const builder = document.getElementById('supp-recipe-ingredients-builder');
@@ -158,6 +168,7 @@ export const supplementsView = {
     
     document.getElementById('btn-supp-purchase').addEventListener('click', () => {
       this.populateIngredientSelect('supp-pur-ing-select');
+      document.getElementById('supp-pur-store').value = '';
       // Set current date as default
       document.getElementById('supp-pur-date').value = new Date().toISOString().split('T')[0];
       this.openModal('modal-supp-purchase');
@@ -168,6 +179,7 @@ export const supplementsView = {
       const builder = document.getElementById('supp-recipe-ingredients-builder');
       builder.innerHTML = '';
       this.addRecipeIngredientRow();
+      this.populateCapsuleSelect('supp-rec-capsule-select');
       this.openModal('modal-supp-recipe');
     });
 
@@ -200,7 +212,7 @@ export const supplementsView = {
     if (!select) return;
 
     const people = store.getPeople();
-    select.innerHTML = people.map(p => `
+    select.innerHTML = '<option value="">Consumo Próprio (Padrão)</option>' + people.map(p => `
       <option value="${p.id}">${p.name}</option>
     `).join('');
   },
@@ -215,6 +227,20 @@ export const supplementsView = {
     } else {
       select.innerHTML = ingredients.map(i => `
         <option value="${i.id}">${i.name} (${i.unit}) - Estoque: ${i.currentStock.toFixed(1)}</option>
+      `).join('');
+    }
+  },
+
+  populateCapsuleSelect(selectId) {
+    const select = document.getElementById(selectId);
+    if (!select) return;
+
+    const ingredients = store.getIngredients(this.category).filter(i => i.subType === 'capsula');
+    if (ingredients.length === 0) {
+      select.innerHTML = '<option value="">Nenhuma (Fórmula em pó/livre)</option>';
+    } else {
+      select.innerHTML = '<option value="">Nenhuma (Fórmula em pó/livre)</option>' + ingredients.map(i => `
+        <option value="${i.id}">${i.name} (Estoque: ${i.currentStock.toFixed(1)})</option>
       `).join('');
     }
   },
@@ -251,9 +277,9 @@ export const supplementsView = {
     const builder = document.getElementById('supp-recipe-ingredients-builder');
     if (!builder) return;
 
-    const ingredients = store.getIngredients(this.category);
+    const ingredients = store.getIngredients(this.category).filter(i => i.subType !== 'capsula');
     if (ingredients.length === 0) {
-      alert("Por favor, cadastre insumos antes de criar fórmulas.");
+      alert("Por favor, cadastre matérias-primas/pós antes de criar fórmulas.");
       return;
     }
 
@@ -305,6 +331,12 @@ export const supplementsView = {
     document.getElementById('supp-summary-stock-val').innerText = `R$ ${financial.totalInventoryValue.toFixed(2)}`;
     document.getElementById('supp-summary-consumption').innerText = `R$ ${financial.totalUsageCost.toFixed(2)}`;
 
+    // Render sub-dashboard widgets if active
+    const subDash = document.getElementById('supp-sub-dashboard');
+    if (subDash && subDash.classList.contains('active')) {
+      this.renderChartsAndAlerts();
+    }
+
     // 1. Render Ingredients (Insumos) Table
     const ingTableBody = document.getElementById('supp-ing-table-body');
     if (ingTableBody) {
@@ -321,24 +353,31 @@ export const supplementsView = {
           const statusClass = i.currentStock === 0 ? 'stock-critical' : (i.currentStock <= i.minStock ? 'stock-low' : 'stock-ok');
           const badgeClass = i.currentStock === 0 ? 'badge-danger' : (i.currentStock <= i.minStock ? 'badge-warn' : '');
           
+          const isCapsule = i.subType === 'capsula';
+          const nameLabel = isCapsule ? ' <span class="badge badge-production" style="text-transform: none;">Cápsula</span>' : '';
+
           const lastPurchase = store.getTransactions(this.category)
             .find(t => t.type === 'purchase' && t.itemId === i.id);
           const lastPurchaseDate = lastPurchase ? lastPurchase.date.split('-').reverse().join('/') : 'N/A';
 
           return `
             <tr>
-              <td><strong>${i.name}</strong></td>
-              <td>${i.currentStock.toFixed(1)} ${i.unit}</td>
-              <td>${i.minStock.toFixed(1)} ${i.unit}</td>
-              <td>R$ ${i.averageCost.toFixed(4)} / ${i.unit}</td>
+              <td>
+                <strong>${i.name}</strong>${nameLabel}
+                <div class="table-sub-text">Última Compra: ${lastPurchaseDate}</div>
+              </td>
               <td>
                 <span class="stock-indicator">
                   <span class="stock-dot ${statusClass}"></span>
-                  <span>R$ ${(i.currentStock * i.averageCost).toFixed(2)}</span>
-                </div>
+                  <span>${i.currentStock.toFixed(1)} ${i.unit} <span style="opacity: 0.5; font-size: 0.75rem;">(Mín: ${i.minStock.toFixed(1)})</span></span>
+                </span>
               </td>
-              <td>${lastPurchaseDate}</td>
-              <td style="text-align: right;">
+              <td>
+                <strong>R$ ${(i.currentStock * i.averageCost).toFixed(2)}</strong>
+                <div class="table-sub-text">Preço Médio: R$ ${i.averageCost.toFixed(4)}</div>
+              </td>
+              <td style="text-align: right; white-space: nowrap;">
+                <button class="btn btn-purple btn-sm compare-ing-btn" data-id="${i.id}">Comparar</button>
                 <button class="btn btn-secondary btn-sm edit-ing-btn" data-id="${i.id}">Editar</button>
                 <button class="btn btn-danger btn-sm delete-ing-btn" data-id="${i.id}">Excluir</button>
               </td>
@@ -368,6 +407,13 @@ export const supplementsView = {
             window.openEditIngredientModal(this.category, id);
           });
         });
+
+        ingTableBody.querySelectorAll('.compare-ing-btn').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            const id = btn.getAttribute('data-id');
+            window.openComparePricesModal(this.category, id);
+          });
+        });
       }
     }
 
@@ -385,10 +431,16 @@ export const supplementsView = {
       } else {
         prodTableBody.innerHTML = products.map(p => {
           const recipe = recipes.find(r => r.id === p.recipeId);
-          const recipeIngredientsText = recipe ? recipe.ingredients.map(ri => {
+          let recipeIngredientsText = recipe ? recipe.ingredients.map(ri => {
             const ing = ingredients.find(i => i.id === ri.ingredientId);
             return `${ri.quantity}${ing ? ing.unit : ''} de ${ing ? ing.name : 'insumo deletado'}`;
           }).join(', ') : 'Fórmula não encontrada';
+
+          if (recipe && recipe.capsuleId) {
+            const cap = ingredients.find(i => i.id === recipe.capsuleId);
+            const capName = cap ? cap.name : 'cápsula deletada';
+            recipeIngredientsText += ` + ${recipe.capsuleQty} x ${capName}`;
+          }
 
           const statusClass = p.currentStock === 0 ? 'stock-critical' : (p.currentStock <= p.minStock ? 'stock-low' : 'stock-ok');
 
@@ -400,21 +452,23 @@ export const supplementsView = {
             <tr>
               <td>
                 <strong>${p.name}</strong>
-                <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px; max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                  Fórmula: ${recipeIngredientsText}
+                <div class="table-sub-text" style="max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                  Insumos: ${recipeIngredientsText}
                 </div>
+                <div class="table-sub-text">Último Preparo: ${lastProdDate}</div>
               </td>
-              <td>${p.currentStock.toFixed(1)} ${p.unit}</td>
-              <td>R$ ${p.averageCost.toFixed(2)}</td>
               <td>
                 <span class="stock-indicator">
                   <span class="stock-dot ${statusClass}"></span>
-                  <span>R$ ${(p.currentStock * p.averageCost).toFixed(2)}</span>
-                </div>
+                  <span>${p.currentStock.toFixed(1)} ${p.unit} <span style="opacity: 0.5; font-size: 0.75rem;">(Mín: ${p.minStock.toFixed(1)})</span></span>
+                </span>
               </td>
-              <td>${lastProdDate}</td>
-              <td style="text-align: right;">
-                <button class="btn btn-secondary btn-sm edit-prod-min-btn" data-id="${p.id}">Definir Alerta</button>
+              <td>
+                <strong>R$ ${(p.currentStock * p.averageCost).toFixed(2)}</strong>
+                <div class="table-sub-text">Custo Unit: R$ ${p.averageCost.toFixed(2)}</div>
+              </td>
+              <td style="text-align: right; white-space: nowrap;">
+                <button class="btn btn-secondary btn-sm edit-prod-min-btn" data-id="${p.id}">Alerta</button>
                 <button class="btn btn-danger btn-sm delete-recipe-btn" data-id="${p.recipeId}">Excluir</button>
               </td>
             </tr>
@@ -455,6 +509,97 @@ export const supplementsView = {
             }
           });
         });
+      }
+    }
+  },
+
+  renderChartsAndAlerts() {
+    const txs = store.getTransactions(this.category);
+    
+    // 1. Group expenses by month (last 6 months)
+    const monthlyData = {};
+    const monthNames = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+    const monthsKeys = [];
+    const labels = [];
+    
+    const now = new Date();
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      monthsKeys.push(key);
+      labels.push(`${monthNames[d.getMonth()]} / ${String(d.getFullYear()).slice(-2)}`);
+      monthlyData[key] = 0;
+    }
+
+    txs.forEach(t => {
+      if (t.type === 'purchase') {
+        const monthKey = t.date.substring(0, 7); // YYYY-MM
+        if (monthlyData[monthKey] !== undefined) {
+          monthlyData[monthKey] += t.totalCost;
+        }
+      }
+    });
+
+    const dataPoints = monthsKeys.map(key => monthlyData[key]);
+    renderLineChart('supplements-financial-chart', dataPoints, labels, '#9d4edd', 'Gastos Suplementos');
+
+    // 2. Render Low Stock Alerts for supplements
+    const alertsBody = document.getElementById('supp-dash-alerts-body');
+    if (alertsBody) {
+      const alerts = store.getLowStockItems(this.category);
+      if (alerts.length === 0) {
+        alertsBody.innerHTML = `
+          <tr>
+            <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 12px;">
+              🎉 Tudo em ordem!
+            </td>
+          </tr>
+        `;
+      } else {
+        alertsBody.innerHTML = alerts.slice(0, 5).map(a => {
+          const statusClass = a.current === 0 ? 'stock-critical' : 'stock-low';
+          return `
+            <tr>
+              <td><strong>${a.name}</strong></td>
+              <td>${a.type}</td>
+              <td>
+                <div class="stock-indicator">
+                  <span class="stock-dot ${statusClass}"></span>
+                  <span>${a.current.toFixed(1)} ${a.unit}</span>
+                </div>
+              </td>
+              <td><span class="badge ${a.current === 0 ? 'badge-danger' : 'badge-warn'}">${a.current === 0 ? 'Zerado' : 'Baixo'}</span></td>
+            </tr>
+          `;
+        }).join('');
+      }
+    }
+
+    // 3. Render Recent Shipments (usage transactions)
+    const recentBody = document.getElementById('supp-dash-recent-body');
+    if (recentBody) {
+      const shipments = txs.filter(t => t.type === 'usage').slice(0, 5);
+      if (shipments.length === 0) {
+        recentBody.innerHTML = `
+          <tr>
+            <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 12px;">
+              Nenhum envio recente.
+            </td>
+          </tr>
+        `;
+      } else {
+        recentBody.innerHTML = shipments.map(s => {
+          const dateStr = s.date.split('-').reverse().join('/');
+          const recipientStr = s.recipientName || 'Consumo Próprio';
+          return `
+            <tr>
+              <td>${dateStr}</td>
+              <td><strong>${s.itemName}</strong></td>
+              <td>${s.quantity} ${s.unit}</td>
+              <td><span style="color: var(--accent-cyan); font-weight: 500;">${recipientStr}</span></td>
+            </tr>
+          `;
+        }).join('');
       }
     }
   }
